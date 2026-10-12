@@ -16,7 +16,7 @@ This project's correctness bar is `pnpm lint` (eslint) and `pnpm typecheck` (vue
 ## How to run it
 
 From the project root (where `package.json` lives), run both checks back to back:
-
+ 
 ```bash
 pnpm lint && pnpm typecheck
 ```
