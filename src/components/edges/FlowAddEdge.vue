@@ -4,12 +4,12 @@ import type { CSSProperties } from 'vue'
 import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath } from '@vue-flow/core'
 import type { EdgeProps } from '@vue-flow/core'
 import type { AddEdgeData } from '@/utils/flowGraph'
-import { useFlowStore } from '@/stores/useFlowStore'
-import PlusCircleIcon from '@/components/icons/components/PlusCircleIcon.vue'
+import { useCreateNodeModal } from '@/composables/useCreateNodeModal'
+import { PlusCircleIcon } from '@/components/icons'
 
 const props = defineProps<EdgeProps<AddEdgeData>>()
 
-const flowStore = useFlowStore()
+const createNodeModal = useCreateNodeModal()
 
 const hovered = ref(false)
 
@@ -54,9 +54,12 @@ function handleClick() {
   if (!props.data) return
 
   if (props.data.kind === 'insert' && props.data.targetId !== undefined) {
-    flowStore.insertNodeBetween(props.data.sourceId, props.data.targetId)
+    createNodeModal.open({
+      source: 'quickAdd',
+      attachment: { mode: 'insert', sourceId: props.data.sourceId, targetId: props.data.targetId },
+    })
   } else if (props.data.kind === 'add' && props.data.parentId !== undefined) {
-    flowStore.addChildNode(props.data.parentId)
+    createNodeModal.open({ source: 'quickAdd', attachment: { mode: 'add', parentId: props.data.parentId } })
   }
 }
 </script>

@@ -114,15 +114,16 @@ type FlowNode =
 - [x] Both quick-add actions create a default placeholder node (6-character hex id, default type) directly via the store — the full create-node modal (title/description/type picker) remains M2 scope
 
 ### M2 — Create Node Flow
-- [ ] "Create New Node" button on canvas toolbar
-- [ ] Create-node form/modal with fields:
-  - [ ] Title (`name`, text)
-  - [ ] Description (text, `description` field on the node)
-  - [ ] Type (select: Send Message / Add Comment / Business Hours)
-- [ ] New node's `parentId` set from the canvas node the "Create" action was invoked from (attach into the tree)
-- [ ] New node `id` generated as a 6-character hex string, matching existing payload style (e.g. `b6a0c1`)
-- [ ] On submit: add node to store + render on canvas
-- [ ] Unit tests: store action, form validation
+- **Toolbar button**, two cases depending on canvas state:
+  - [x] Empty canvas (no nodes) → clicking creates the `trigger` node directly, no modal (trigger has no name/description/type choice)
+  - [x] Non-empty canvas → clicking opens the Create-New-Node modal with `trigger` offered as a 4th type option alongside Send Message / Add Comment / Business Hours
+    - [x] Type = `trigger` → Title/Description hidden, no parent required; submit creates an independent second root (`parentId: -1`) — a new, separate tree on the same canvas
+    - [x] Type = anything else → **Parent** field required: a dropdown rendered as a nested, indented tree (children indented under their parent); submit appends the new node as a child of the chosen parent
+- **Quick-add buttons** (edge midpoint `+`, leaf `+`) — rerouted through the same modal, pre-filled with their attachment context (insert-between or append-child):
+  - [x] No Parent field shown (attach point already implied by which button was clicked)
+- **Store (`useFlowStore.ts`) — consolidated node creation**
+  - [x] Replace `createDefaultNode` + `insertNodeBetween` + `addChildNode` with one generic `createNode(input, attachment)` action, where `attachment` is `{ mode: 'root' }` (new independent trigger), `{ mode: 'insert'; sourceId; targetId }` (splice into an existing edge), or `{ mode: 'add'; parentId }` (append as a child)
+  - [x] Per-type `data` defaults via a `createDataForType(type)` helper (`trigger`/`sendMessage`/`addComment`/`dateTime`)
 
 ### M3 — Node Details Drawer (Core)
 - [ ] Drawer component, toggled by clicking a node (closed by clicking elsewhere / close button)
@@ -149,7 +150,6 @@ type FlowNode =
   - [ ] Preserve `data.connectors` (success/failure branch ids) on save — not user-editable, just passed through
   - [ ] Validate `startTime < endTime` per row (24h `HH:mm`)
 - [ ] Composables per concern: `useAttachments()`, `useComments()`, `useBusinessHours()`
-- [ ] Unit tests for each composable + drawer section component
 
 ### M5 — Data Layer / Persistence
 - [ ] Define API contract from the finalized schema (fetch/save flow + nodes)

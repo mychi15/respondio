@@ -7,7 +7,7 @@ import {
   computeNodePositions,
   getNodeHeight,
 } from './flowLayout'
-import { buildAddNodePlaceholders, buildEdgesFromNodes, isInteractiveNodeType, toVueFlowNodes } from './flowGraph'
+import { buildAddNodePlaceholders, buildEdgesFromNodes, buildNodeTree, isInteractiveNodeType, toVueFlowNodes } from './flowGraph'
 
 const sample: FlowNode[] = [
   { id: 1, parentId: -1, type: 'trigger', data: { type: 'conversationOpened', oncePerContact: true } },
@@ -111,6 +111,26 @@ describe('toVueFlowNodes', () => {
     const triggerBottom = trigger.position.y + getNodeHeight(chain[0])
     const connectorTop = connector.position.y
     expect(connectorTop - triggerBottom).toBe(DEFAULT_VERTICAL_SPACING)
+  })
+})
+
+describe('buildNodeTree', () => {
+  it('walks depth-first, parent immediately followed by its children', () => {
+    const tree = buildNodeTree(sample)
+    expect(tree.map((item) => [item.node.id, item.depth])).toEqual([
+      [1, 0],
+      [2, 1],
+      [3, 2],
+      [4, 3],
+      [5, 3],
+    ])
+  })
+
+  it('marks dateTime as non-selectable while its connector children remain selectable', () => {
+    const tree = buildNodeTree(sample)
+    expect(tree.find((item) => item.node.id === 3)?.selectable).toBe(false)
+    expect(tree.find((item) => item.node.id === 4)?.selectable).toBe(true)
+    expect(tree.find((item) => item.node.id === 5)?.selectable).toBe(true)
   })
 })
 

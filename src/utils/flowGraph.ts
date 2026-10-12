@@ -1,7 +1,7 @@
 import type { Edge, Node } from '@vue-flow/core'
 import { getNodeEdgeColor, isAddableNodeType, NON_INTERACTIVE_NODE_TYPES } from '@/types/flow'
 import type { FlowNode, FlowNodeType, NodeId } from '@/types/flow'
-import { computeNodePositions, DEFAULT_VERTICAL_SPACING, getNodeHeight, getNodeWidth } from './flowLayout'
+import { computeNodePositions, DEFAULT_VERTICAL_SPACING, getNodeHeight, getNodeWidth, groupChildrenByParent, walkNodesDepthFirst } from './flowLayout'
 import type { FlowPosition } from './flowLayout'
 
 export interface AddEdgeData {
@@ -56,6 +56,28 @@ export function toVueFlowNodes(nodes: FlowNode[], positions?: Map<NodeId, FlowPo
       focusable: interactive,
     }
   })
+}
+
+export interface NodeTreeItem {
+  node: FlowNode
+  depth: number
+  selectable: boolean
+}
+
+/**
+ * Flat, nested/indented list of every node (e.g. for a parent picker),
+ * ordered by the same pre-order depth-first walk computeNodePositions uses.
+ * `selectable` reuses isAddableNodeType so dateTime rows are shown (for
+ * context, and because their connector children are still valid parents)
+ * but rendered disabled.
+ */
+export function buildNodeTree(nodes: FlowNode[]): NodeTreeItem[] {
+  const childrenByParent = groupChildrenByParent(nodes)
+  return walkNodesDepthFirst(nodes, childrenByParent).map(({ node, depth }) => ({
+    node,
+    depth,
+    selectable: isAddableNodeType(node.type),
+  }))
 }
 
 export function buildAddNodePlaceholders(

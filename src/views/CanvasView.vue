@@ -8,6 +8,8 @@ import '@vue-flow/core/dist/theme-default.css'
 import FlowNodeRenderer from '@/components/FlowNodeRenderer.vue'
 import FlowAddEdge from '@/components/edges/FlowAddEdge.vue'
 import AddNodePlaceholder from '@/components/nodes/AddNodePlaceholder.vue'
+import CanvasToolbar from '@/components/toolbar/CanvasToolbar.vue'
+import CreateNodeModal from '@/components/toolbar/CreateNodeModal.vue'
 import { useFlowStore } from '@/stores/useFlowStore'
 
 const flowStore = useFlowStore()
@@ -31,5 +33,7 @@ const canvasEdges = computed(() => [...flowStore.vueFlowEdges, ...flowStore.addN
       <Background />
       <Controls />
     </VueFlow>
+    <CanvasToolbar />
+    <CreateNodeModal />
   </div>
 </template>

@@ -57,6 +57,12 @@ export const FLOW_NODE_TYPE_LABELS: Record<FlowNodeType, string> = {
   dateTimeConnector: 'Connector',
 }
 
+export const CREATABLE_NODE_TYPES = ['sendMessage', 'addComment', 'dateTime'] as const satisfies readonly FlowNodeType[]
+
+export const TOOLBAR_CREATABLE_NODE_TYPES = ['trigger', ...CREATABLE_NODE_TYPES] as const satisfies readonly FlowNodeType[]
+
+export type CreatableNodeType = (typeof TOOLBAR_CREATABLE_NODE_TYPES)[number]
+
 export interface NodeEdgeOptions {
   addable: boolean
   color: string
