@@ -92,12 +92,12 @@ type FlowNode =
 ## Milestones
 
 ### M0 — Project Scaffolding
-- [ ] Init Vite + Vue 3 + TypeScript project
-- [ ] Install & configure Pinia, Vue Router, Vue Flow, Vue Query
-- [ ] Base routing: canvas view (`/`) and node detail route (`/node/:nodeId`)
-- [ ] ESLint + Prettier + `vue-tsc` wired up (`pnpm lint`, `pnpm typecheck`)
-- [ ] Vitest + `@vue/test-utils` configured
-- [ ] Vercel project setup & initial deploy (empty shell)
+- [x] Init Vite + Vue 3 + TypeScript project
+- [x] Install & configure Pinia, Vue Router, Vue Flow, Vue Query
+- [x] Base routing: canvas view (`/`) and node detail route (`/node/:nodeId`)
+- [x] ESLint + Prettier + `vue-tsc` wired up (`pnpm lint`, `pnpm typecheck`)
+- [x] Vitest + `@vue/test-utils` configured
+- [x] Vercel project setup & initial deploy (empty shell)
 
 ### M1 — Canvas Foundation
 - [ ] Integrate Vue Flow canvas as the main view
