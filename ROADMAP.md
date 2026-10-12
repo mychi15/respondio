@@ -100,14 +100,17 @@ type FlowNode =
 - [x] Vercel project setup & initial deploy (empty shell)
 
 ### M1 — Canvas Foundation
-- [ ] Integrate Vue Flow canvas as the main view
-- [ ] Define `FlowNode` TypeScript types (id, type, title, description, data payload per type)
-- [ ] Pinia store (`useFlowStore`) holding nodes/edges state
-- [ ] Custom node renderer component:
-  - [ ] icon (per node type)
-  - [ ] title
-  - [ ] description, truncated to 3 lines (CSS line-clamp)
-- [ ] Visual distinction for `trigger` / `success` / `failure` nodes (non-interactive styling, no click handlers)
+- [x] Integrate Vue Flow canvas as the main view
+- [x] Define `FlowNode` TypeScript types (id, type, title, description, data payload per type)
+- [x] Pinia store (`useFlowStore`) holding nodes/edges state
+- [x] Custom node renderer component:
+  - [x] icon (per node type)
+  - [x] title
+  - [x] description, truncated to 3 lines (CSS line-clamp)
+- [x] Visual distinction for `trigger` / `success` / `failure` nodes (non-interactive styling, no click handlers)
+- [x] Edge quick-add: plus-circle button at the midpoint of every edge; clicking it inserts a new node spliced between the edge's source and target
+- [x] Leaf nodes (no children) render a dashed placeholder edge ending in a plus-circle button; hover turns the edge/button orange; clicking it appends a default child node
+- [x] Both quick-add actions create a default placeholder node (6-character hex id, default type) directly via the store — the full create-node modal (title/description/type picker) remains M2 scope
 
 ### M2 — Create Node Flow
 - [ ] "Create New Node" button on canvas toolbar
