@@ -14,6 +14,7 @@ A canvas-based flow chart app for building messaging/automation flows, built wit
 - Vercel Blob (attachment storage + persisted flow JSON)
 - Vercel Serverless Functions (upload handler, flow JSON read/write)
 - Tailwind CSS
+- shadcn-vue (reka-ui base, lucide icons) — modal/select/button/form primitives
 - Deployment: Vercel
 
 ## Node Types (MVP)

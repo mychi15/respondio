@@ -21,4 +21,14 @@ export default [
       'vue/block-order': ['error', { order: ['script', 'template', 'style'] }],
     },
   },
+  {
+    // shadcn-vue generated primitives: single-word names and prop defaults
+    // follow the upstream registry convention, not this project's rules.
+    name: 'app/shadcn-ui-overrides',
+    files: ['src/components/ui/**/*.vue'],
+    rules: {
+      'vue/multi-word-component-names': 'off',
+      'vue/require-default-prop': 'off',
+    },
+  },
 ]
