@@ -146,7 +146,7 @@ type FlowNode =
   - [x] Delete cascades: removes the comment node and any downstream descendants (consistent with the global delete-cascade rule)
 - [x] **Business Hours**
   - [x] Render `data.times` (one row per weekday, `mon`–`sun`) with start/end time pickers
-  - [x] `data.timezone`: select field listing timezones (curated `TIMEZONE_OPTIONS` combobox rather than the full `Intl.supportedValuesOf('timeZone')` set)
+  - [x] `data.timezone`: select field listing timezones (`TIMEZONE_OPTIONS` combobox over the full `Intl.supportedValuesOf('timeZone')` set, with UTC offsets precomputed into JSON)
   - [x] Preserve `data.connectors` (success/failure branch ids) on save — not user-editable, just passed through
   - [x] Validate `startTime < endTime` per row (24h `HH:mm`)
 - [x] Composables per concern: `useAttachments()`, `useComments()`, `useBusinessHours()` — implemented instead as per-type field components (`SendMessageFields.vue`, `AddCommentFields.vue`, `BusinessHoursFields.vue`) rather than standalone composables

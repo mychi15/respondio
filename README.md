@@ -12,35 +12,56 @@ Requires [pnpm](https://pnpm.io/).
 pnpm install
 ```
 
-No `.env.local` is required to get started: `API_BASE_URL` ([src/api/flowApi.ts](src/api/flowApi.ts)) defaults to the deployed instance of this app in local dev, so the local frontend talks to it out of the box. Deployed builds default to `''` instead, so each deployment (including previews) calls its own same-origin `/api`. `api/flow.ts` and `api/upload.ts` are Vercel Serverless Functions backed by Upstash Redis (flow data) and Vercel Blob (attachments) — plain `vite` doesn't run them, which is why the default points at a deployment rather than `localhost`.
+No `.env.local` needed. In local dev the app calls the deployed API.
 
-Only set `VITE_API_BASE_URL` in `.env.local` if you need to override that default — e.g. to run the API functions locally yourself (see [Running the project](#running-the-project)), which needs its own `KV_REST_API_URL`/`KV_REST_API_TOKEN` (or `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN`) for flow data and `BLOB_READ_WRITE_TOKEN` for uploads.
+To run the API locally instead, set `VITE_API_BASE_URL` in `.env.local` and provide Redis (`KV_REST_API_URL`/`KV_REST_API_TOKEN`) and Blob (`BLOB_READ_WRITE_TOKEN`) credentials — see [Running the project](#running-the-project).
 
 ## How it works
 
-**Data model.** A flow is a flat array of nodes (`FlowNode[]`, [src/types/flow.ts](src/types/flow.ts)). There is no separate edge list — each node points at its parent via `parentId`, and the canvas tree (and its Vue Flow edges) is derived from that relationship on every render ([src/utils/flowGraph.ts](src/utils/flowGraph.ts)). The root node has `parentId: -1`. Five node types exist: `trigger` (flow entry, display-only), `sendMessage`, `addComment`, `dateTime` (business hours, branches into two `dateTimeConnector` children for `success`/`failure`), and `dateTimeConnector` itself (display-only).
+1. **Data model.** A flow is a flat array of nodes (`FlowNode[]`, [src/types/flow.ts](src/types/flow.ts)). There is no separate edge list — each node points at its parent via `parentId`, and the canvas tree (and its Vue Flow edges) is derived from that relationship on every render ([src/utils/flowGraph.ts](src/utils/flowGraph.ts)). The root node has `parentId: -1`. Five node types exist: `trigger` (flow entry, display-only), `sendMessage`, `addComment`, `dateTime` (business hours, branches into two `dateTimeConnector` children for `success`/`failure`), and `dateTimeConnector` itself (display-only).
 
-**Canvas.** [CanvasView.vue](src/views/CanvasView.vue) renders the tree with [Vue Flow](https://vueflow.dev/). Node positions are computed layout, not stored — [src/utils/flowLayout.ts](src/utils/flowLayout.ts) walks the tree depth-first and lays out each node under its parent. Quick-add affordances (a `+` on every edge midpoint, a `+` after every leaf) let you insert or append a node without opening the modal first.
+2. **Canvas.** [CanvasView.vue](src/views/CanvasView.vue) renders the tree with [Vue Flow](https://vueflow.dev/). Node positions are stored on each node: a flow without them gets one auto-layout pass on load ([src/utils/flowLayout.ts](src/utils/flowLayout.ts) walks the tree depth-first and lays out each node under its parent), and after that drags and new nodes save their own positions. **Auto-align** reruns the layout and saves fresh positions for every node. Quick-add affordances (a `+` on every edge midpoint, a `+` after every leaf) let you insert or append a node besides the "Create New Node" button.
 
-**State.** [useFlowStore](src/stores/useFlowStore.ts) (Pinia, setup-store style) is the single source of truth for `nodes`. All mutations (`createNode`, `updateNode`, `updateBusinessHours`, `updateSendMessagePayload`, `updateComment`, `deleteNode`) act on it synchronously, then call `persist()` to push the whole flow back to the API. The store derives `vueFlowNodes`/`vueFlowEdges`/`addNodePlaceholders` as computed properties, so the canvas is always a pure function of `nodes`.
+3. **State.** [useFlowStore](src/stores/useFlowStore.ts) (Pinia, setup-store style) is the single source of truth for `nodes`. All mutations (`createNode`, `updateNode`, `updateBusinessHours`, `updateSendMessagePayload`, `updateComment`, `deleteNode`) act on it synchronously, then call `persist()` to push the whole flow back to the API. The store derives `vueFlowNodes`/`vueFlowEdges`/`addNodePlaceholders` as computed properties, so the canvas is always a pure function of `nodes`.
 
-**Editing.** Clicking an interactive node opens [NodeDrawer.vue](src/components/nodes/NodeDrawer.vue), which renders a per-type fields component (`SendMessageFields`, `AddCommentFields`, `BusinessHoursFields`) alongside the shared title/description editor and delete action. The same content is reachable as a standalone page at `/node/:nodeId` ([NodeDetailView.vue](src/views/NodeDetailView.vue)) for deep-linking/sharing.
+4. **Editing.** Clicking an interactive node opens [NodeDrawer.vue](src/components/nodes/NodeDrawer.vue), which renders a per-type fields component (`SendMessageFields`, `AddCommentFields`, `BusinessHoursFields`) alongside the shared title/description editor and delete action. The same content is reachable as a standalone page at `/node/:nodeId` ([NodeDetailView.vue](src/views/NodeDetailView.vue)) for deep-linking/sharing.
 
-**Persistence.** [useFlowQuery](src/composables/useFlowQuery.ts) (TanStack Query) fetches the flow on mount and syncs it into the store; this runs in both `CanvasView` and `NodeDetailView` so a direct load of a node URL works without visiting the canvas first. `GET/POST /api/flow?key=` ([api/flow.ts](api/flow.ts)) reads/writes the flow as a single JSON value in Upstash Redis, seeding it from [api/_fixtures/mockFlow.ts](api/_fixtures/mockFlow.ts) on first read if the key doesn't exist yet. Attachment uploads go through `POST /api/upload` ([api/upload.ts](api/upload.ts)), which issues a Vercel Blob client-upload token rather than proxying the file through the function body.
+5. **Persistence.** [useFlowQuery](src/composables/useFlowQuery.ts) (TanStack Query) fetches the flow on mount and syncs it into the store; this runs in both `CanvasView` and `NodeDetailView` so a direct load of a node URL works without visiting the canvas first. `GET/POST /api/flow?key=` ([api/flow.ts](api/flow.ts)) reads/writes the flow as a single JSON value in Upstash Redis, seeding it from [api/_fixtures/mockFlow.ts](api/_fixtures/mockFlow.ts) on first read if the key doesn't exist yet. Attachment uploads go through `POST /api/upload` ([api/upload.ts](api/upload.ts)), which issues a Vercel Blob client-upload token rather than proxying the file through the function body.
 
 ## Design decisions
 
-- **Edges are implicit, derived from `parentId`.** Keeping a flat node array with a parent pointer (rather than a separate nodes+edges graph) means there's one place mutations happen and nothing to keep in sync; the canvas tree, the parent-picker dropdown, and cascade-delete all walk the same structure.
-- **Positions are computed, not stored.** Node coordinates are a pure function of the tree shape (`flowLayout.ts`), so inserting/deleting a node never leaves stale or overlapping positions behind — the whole subtree just re-lays-out.
-- **Store-mutate-then-persist, not `useMutation`.** Every store action mutates `nodes` immediately (optimistic, no rollback) and fires `persist()` as an unawaited side effect; failures surface as a toast, not a reverted UI state. This was a deliberate MVP tradeoff over wrapping each action in TanStack Query mutations with `onMutate`/`onError` rollback — simpler, and acceptable because the only failure mode is "the last edit didn't save," which the toast makes visible.
-- **Saves are chained, not raced.** `persist()` chains onto a `pendingSave` promise instead of firing every call independently, so a rapid second edit can't have its request land before (and get overwritten by) a slower first one.
-- **Cascade delete.** Deleting a node removes it and every downstream descendant (including whole `dateTime` success/failure subtrees). This was chosen over "delete just this node and re-parent its children" because a flow node's children are only meaningful in that node's context (e.g. a business-hours branch doesn't make sense reattached elsewhere).
-- **`trigger` / `dateTimeConnector` are display-only.** They're real, positioned canvas nodes (so the tree has a visible root and visible branches) but intentionally not clickable and have no drawer — editing them wasn't in scope, and making them inert avoids a half-built edit UI for a node type with almost no editable data.
-- **Per-type field components over composables.** The roadmap originally planned `useAttachments()`/`useComments()`/`useBusinessHours()` composables; these became full components (`SendMessageFields.vue`, etc.) instead, since each one owns both state and a non-trivial template, which a composable would just end up re-exposing to a wrapper component anyway.
-- **Curated timezone list over `Intl.supportedValuesOf('timeZone')`.** A hand-picked `TIMEZONE_OPTIONS` combobox ([src/data/timezoneOptions.ts](src/data/timezoneOptions.ts)) was chosen over the full IANA set so the dropdown stays navigatable with typeahead search rather than listing hundreds of rarely-used zones.
-- **Flow data lives in Upstash Redis; uploaded files live in Vercel Blob.** Flow data started out in Blob too, but every overwrite took ~1–1.5s (a full file rewrite plus CDN cache purge) and reads right after a write could return stale or broken content. A single Redis key per flow (one JSON value per deployment/test-key, in the same region as the functions) makes saves take milliseconds and reads immediately consistent. Blob is still the right fit for attachments: write-once static files served from a CDN.
-- **Client-upload token endpoint instead of a server-side proxy.** `/api/upload` hands the browser a signed Blob upload token rather than streaming the file through the serverless function body, sidestepping the platform's request-body size limit entirely.
-- **`description` added to the schema as optional.** The original sample payload had no description field; it was added to satisfy a title+description+type requirement per node, kept optional (not required) so empty-description rendering stays exercised, not just the populated case.
+1. **Edges are implicit, derived from `parentId`.** 
+   Keeping a flat node array with a parent pointer (rather than a separate nodes+edges graph) means there's one place mutations happen and nothing to keep in sync; the canvas tree, the parent-picker dropdown, and cascade-delete all walk the same structure.
+
+2. **Positions are stored, computed only on demand.** 
+   Each node persists its own `position`, so manual drags survive reloads. The tree layout (`flowLayout.ts`) only runs to backfill nodes missing a position on load, and when the user clicks Auto-align, which overwrites every position. New nodes are placed under their parent, and inserting one pushes the target's subtree down to make room.
+
+3. **Store-mutate-then-persist, not `useMutation`.** 
+   Every store action mutates `nodes` immediately (optimistic, no rollback) and fires `persist()` as an unawaited side effect; failures surface as a toast, not a reverted UI state. This was a deliberate MVP tradeoff over wrapping each action in TanStack Query mutations with `onMutate`/`onError` rollback — simpler, and acceptable because the only failure mode is "the last edit didn't save," which the toast makes visible.
+
+4. **Saves are chained, not raced.** 
+   `persist()` chains onto a `pendingSave` promise instead of firing every call independently, so a rapid second edit can't have its request land before (and get overwritten by) a slower first one.
+
+5. **Cascade delete.** 
+   Deleting a node removes it and every downstream descendant (including whole `dateTime` success/failure subtrees). This was chosen over "delete just this node and re-parent its children" because a flow node's children are only meaningful in that node's context (e.g. a business-hours branch doesn't make sense reattached elsewhere).
+
+6. **`trigger` / `dateTimeConnector` are display-only.** 
+   They're real, positioned canvas nodes (so the tree has a visible root and visible branches) but intentionally not clickable and have no drawer — editing them wasn't in scope, and making them inert avoids a half-built edit UI for a node type with almost no editable data.
+
+7. **Per-type field components over composables.** 
+   I originally planned `useAttachments()`/`useComments()`/`useBusinessHours()` composables; these became full components (`SendMessageFields.vue`, etc.) instead, since each one owns both state and a non-trivial template, which a composable would just end up re-exposing to a wrapper component anyway.
+
+8. **Full IANA timezone list, precomputed.** 
+   The timezone combobox lists every zone from `Intl.supportedValuesOf('timeZone')` (~418), labeled with its UTC offset and sorted west-to-east. Offsets are generated offline into [src/data/timezoneOptions.json](src/data/timezoneOptions.json) because building ~400 `Intl.DateTimeFormat` instances at runtime blocked the main thread for seconds; typeahead search keeps the long list navigable.
+
+9. **Flow data lives in Upstash Redis; uploaded files live in Vercel Blob.** 
+   Flow data started out in Blob too, but every overwrite took ~1–1.5s (a full file rewrite plus CDN cache purge) and reads right after a write could return stale or broken content. A single Redis key per flow (one JSON value per deployment/test-key, in the same region as the functions) makes saves take milliseconds and reads immediately consistent. Blob is still the right fit for attachments: write-once static files served from a CDN.
+
+10. **Client-upload token endpoint instead of a server-side proxy.** 
+    `/api/upload` hands the browser a signed Blob upload token rather than streaming the file through the serverless function body, sidestepping the platform's request-body size limit entirely.
+
+11. **`description` added to the schema as optional.** 
+    The original sample payload had no description field; it was added to satisfy a title+description+type requirement per node, kept optional (not required) so empty-description rendering stays exercised, not just the populated case.
 
 ## Project structure
 
@@ -67,9 +88,9 @@ e2e/               # Playwright config helpers + golden-path spec
 pnpm dev        # vite dev server, http://localhost:5173
 ```
 
-With `VITE_API_BASE_URL` set to the deployed instance (see [Setup](#setup)), this is all you need — the local frontend reads/writes flow data against the same live Redis database as the deployed app.
+This uses the deployed API (and its live database) via `VITE_API_BASE_URL` — see [Setup](#setup).
 
-If you'd rather run the API functions locally too (e.g. to test changes to `api/flow.ts`/`api/upload.ts` without deploying), run `vercel dev` instead of `pnpm dev`, and point `VITE_API_BASE_URL` at it (e.g. `http://localhost:3000`). That needs its own Redis and Blob credentials — `vercel link` + `vercel env pull .env.local` if you have access to the project, or add your own Upstash Redis (Vercel Marketplace) and Blob store if you don't. Without Redis credentials, `GET /api/flow` serves the fixture and saves fail.
+To run the API locally instead, use `vercel dev` and set `VITE_API_BASE_URL=http://localhost:3000`. You'll need Redis and Blob credentials (`vercel env pull .env.local`); without them, the app loads sample data and can't save.
 
 Other scripts:
 
@@ -89,7 +110,16 @@ pnpm typecheck   # vue-tsc --noEmit
 pnpm test
 ```
 
-**End-to-end tests** (Playwright, [e2e/golden-path.spec.ts](e2e/golden-path.spec.ts)): drives the full flow — load → create node → edit title/description → upload attachment → edit type-specific fields → cascade-delete — against a dedicated test blob key (`TEST_FLOW_KEY`, separate from the real flow data) and asserts against both the UI and the persisted JSON.
+**End-to-end tests** (Playwright, [e2e/golden-path.spec.ts](e2e/golden-path.spec.ts)): drives the full flow against a dedicated test blob key (`TEST_FLOW_KEY`, separate from the real flow data) and asserts against both the UI and the persisted JSON.
+
+```mermaid
+flowchart TD
+  A[Load flow] --> B[Create node]
+  B --> C[Edit title / description]
+  C --> D[Upload attachment]
+  D --> E[Edit type-specific fields]
+  E --> F[Cascade-delete]
+```
 
 ```bash
 pnpm test:e2e
