@@ -27,6 +27,19 @@ export function isAddableNodeType(type: FlowNodeType): boolean {
 }
 
 /**
+ * Whether `node` can take on one more child. Every node type is capped at a
+ * single child, except dateTime (Business Hours) nodes, which take exactly
+ * two — one success and one failure dateTimeConnector.
+ */
+export function canAddChildTo(node: FlowNode, childrenByParent: Map<NodeId, FlowNode[]>): boolean {
+  if (!isAddableNodeType(node.type)) return false
+
+  const children = childrenByParent.get(node.id) ?? []
+  const maxChildren = node.type === 'dateTime' ? 2 : 1
+  return children.length < maxChildren
+}
+
+/**
  * The single source of truth for whether (and what) description text a node
  * renders. Shared between FlowNodeRenderer (what to display) and the layout
  * math (how much vertical space to reserve), so the two never drift apart.
@@ -110,16 +123,16 @@ export interface NodeTreeItem {
 /**
  * Flat, nested/indented list of every node (e.g. for a parent picker),
  * ordered by the same pre-order depth-first walk computeNodePositions uses.
- * `selectable` reuses isAddableNodeType so dateTime rows are shown (for
- * context, and because their connector children are still valid parents)
- * but rendered disabled.
+ * `selectable` reuses canAddChildTo so dateTime rows are shown (for context)
+ * but rendered disabled once they already have their two connector
+ * children, and every other node type is disabled once it already has one.
  */
 export function buildNodeTree(nodes: FlowNode[]): NodeTreeItem[] {
   const childrenByParent = groupChildrenByParent(nodes)
   return walkNodesDepthFirst(nodes, childrenByParent).map(({ node, depth }) => ({
     node,
     depth,
-    selectable: isAddableNodeType(node.type),
+    selectable: canAddChildTo(node, childrenByParent),
   }))
 }
 

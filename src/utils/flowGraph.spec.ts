@@ -139,6 +139,22 @@ describe('buildNodeTree', () => {
     expect(tree.find((item) => item.node.id === 4)?.selectable).toBe(true)
     expect(tree.find((item) => item.node.id === 5)?.selectable).toBe(true)
   })
+
+  it('marks a node as non-selectable once it already has its one allowed child', () => {
+    const tree = buildNodeTree(sample)
+    // node 1 (trigger) already has child node 2; node 2 (sendMessage) already has child node 3
+    expect(tree.find((item) => item.node.id === 1)?.selectable).toBe(false)
+    expect(tree.find((item) => item.node.id === 2)?.selectable).toBe(false)
+  })
+
+  it('keeps a childless node selectable', () => {
+    const childless: FlowNode[] = [
+      { id: 1, parentId: -1, type: 'trigger', data: { type: 'conversationOpened', oncePerContact: true } },
+    ]
+    const tree = buildNodeTree(childless)
+    expect(tree.find((item) => item.node.id === 1)?.selectable).toBe(true)
+  })
+
 })
 
 describe('buildAddNodePlaceholders', () => {
