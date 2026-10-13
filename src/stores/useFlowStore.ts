@@ -6,7 +6,6 @@ import { computeNodePositions } from '@/utils/flowLayout'
 import { generateNodeId } from '@/utils/helpers'
 import { saveFlow } from '@/api/flowApi'
 import { useToast } from '@/composables/useToast'
-import mockFlowNodes from '../../api/_fixtures/mockFlow.json'
 
 export type CreateNodeAttachment =
   | { mode: 'root' }
@@ -33,9 +32,7 @@ function createDataForType(type: CreatableNodeType): FlowNode['data'] {
 }
 
 export const useFlowStore = defineStore('flow', () => {
-  // Cloned so pushes/mutations don't leak into the shared mockFlowNodes
-  // fixture (and therefore into other tests/store instances importing it).
-  const nodes = ref<FlowNode[]>(structuredClone(mockFlowNodes as FlowNode[]))
+  const nodes = ref<FlowNode[]>([])
 
   const nodePositions = computed(() => computeNodePositions(nodes.value))
   const vueFlowNodes = computed(() => toVueFlowNodes(nodes.value, nodePositions.value))
@@ -44,10 +41,8 @@ export const useFlowStore = defineStore('flow', () => {
 
   const toast = useToast()
 
-  // Chained so saves always reach the server in the order they were
-  // triggered. Without this, two quick persist() calls could race over the
-  // network and the second save could arrive before the first, so the
-  // older data would overwrite the newer data.
+  // Chained to preserve save order — otherwise a faster second request could
+  // land before the first and get overwritten by older data.
   let pendingSave: Promise<void> = Promise.resolve()
 
   function persist(): Promise<void> {
@@ -57,10 +52,8 @@ export const useFlowStore = defineStore('flow', () => {
   }
 
   function setNodes(next: FlowNode[]): void {
-    // Cloned: `next` may be Vue Query's reactive cache data, and the store
-    // needs a plain mutable array to push/splice into. toRaw() strips the
-    // reactive Proxy wrapper first — structuredClone can't clone a Proxy
-    // directly, but the underlying storage it unwraps to is already plain.
+    // toRaw() unwraps Vue Query's reactive Proxy so structuredClone can clone
+    // it into a plain, mutable array.
     nodes.value = structuredClone(toRaw(next))
   }
 
@@ -97,9 +90,7 @@ export const useFlowStore = defineStore('flow', () => {
       newNode.data.connectors = [successId, failureId]
     }
 
-    // Deliberately not awaiting persist() here: optimistic UI, the store is
-    // already updated. If the save fails, there's no automatic retry — the
-    // user just sees the failure toast from persist()'s catch.
+    // Not awaited: optimistic UI, failures surface via persist()'s toast.
     persist()
     return newNode
   }
