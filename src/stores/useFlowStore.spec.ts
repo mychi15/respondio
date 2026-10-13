@@ -1,7 +1,7 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { useFlowStore } from './useFlowStore'
-import mockFlowNodes from '../../api/_fixtures/mockFlow.json'
+import mockFlowNodes from '../../api/_fixtures/mockFlow'
 
 describe('useFlowStore', () => {
   beforeEach(() => {

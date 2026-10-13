@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'node:url'
 import { expect, test } from '@playwright/test'
-import mockFlow from '../api/_fixtures/mockFlow.json' with { type: 'json' }
+import mockFlow from '../api/_fixtures/mockFlow.js'
 import { TEST_FLOW_KEY } from './constants.js'
 
 const ATTACHMENT_PATH = fileURLToPath(new URL('./fixtures/test-attachment.png', import.meta.url))

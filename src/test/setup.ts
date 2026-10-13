@@ -1,5 +1,5 @@
 import { vi } from 'vitest'
-import mockFlowNodes from '../../api/_fixtures/mockFlow.json'
+import mockFlowNodes from '../../api/_fixtures/mockFlow'
 
 vi.mock('@/api/flowApi', () => ({
   API_BASE_URL: '',

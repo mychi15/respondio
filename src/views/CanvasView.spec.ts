@@ -4,12 +4,9 @@ import { VueFlow } from '@vue-flow/core'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import type { FlowNode } from '@/types/flow'
 import { useNodeDrawer } from '@/composables/useNodeDrawer'
 import CanvasView from './CanvasView.vue'
-import mockFlowNodesJson from '../../api/_fixtures/mockFlow.json'
-
-const mockFlowNodes = mockFlowNodesJson as FlowNode[]
+import mockFlowNodes from '../../api/_fixtures/mockFlow'
 
 const mountOptions = { global: { plugins: [VueQueryPlugin] } }
 
