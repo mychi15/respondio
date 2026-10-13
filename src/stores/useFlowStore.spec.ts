@@ -76,4 +76,38 @@ describe('useFlowStore', () => {
     const created = store.createNode({ name: 'New Node', type }, { mode: 'add', parentId: 1 })
     expect(created.data).toEqual(expectedData)
   })
+
+  it('updateNode merges the given patch into the matching node', () => {
+    const store = useFlowStore()
+    store.updateNode(2, { name: 'Renamed', description: 'New description' })
+
+    const updated = store.nodes.find((node) => node.id === 2)!
+    expect(updated.name).toBe('Renamed')
+    expect(updated.description).toBe('New description')
+  })
+
+  it('updateNode does nothing when the node id does not exist', () => {
+    const store = useFlowStore()
+    const before = JSON.parse(JSON.stringify(store.nodes))
+    store.updateNode('does-not-exist', { name: 'Renamed' })
+
+    expect(JSON.parse(JSON.stringify(store.nodes))).toEqual(before)
+  })
+
+  it('deleteNode removes the node and every downstream descendant, including connector branches', () => {
+    const store = useFlowStore()
+    // Tree: 1 -> 3 -> {4, 5}; 4 -> 2 -> 6
+    store.deleteNode(3)
+
+    expect(store.nodes.map((node) => node.id)).toEqual([1])
+  })
+
+  it('deleteNode on a leaf only removes that node', () => {
+    const store = useFlowStore()
+    const before = store.nodes.length
+    store.deleteNode(6)
+
+    expect(store.nodes).toHaveLength(before - 1)
+    expect(store.nodes.some((node) => node.id === 6)).toBe(false)
+  })
 })

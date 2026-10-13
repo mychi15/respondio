@@ -32,10 +32,6 @@ export function isAddableNodeType(type: FlowNodeType): boolean {
  * math (how much vertical space to reserve), so the two never drift apart.
  */
 export function getNodeDescription(node: FlowNode): string | undefined {
-  if (node.description) {
-    return node.description
-  }
-
   if (node.type === 'dateTime') {
     return `Business Hours - ${node.data.timezone}`
   }
@@ -44,12 +40,19 @@ export function getNodeDescription(node: FlowNode): string | undefined {
     return camelCaseToWords(node.data.type)
   }
 
-  if (node.type === 'sendMessage' && node.data.payload?.length) {
-    return `Message:\n${node.data.payload
-      .map((p) => (p.type === 'text' ? p.text : ''))
-      .join(' ')}`
+  if (node.type === 'sendMessage') {
+    const text = node.data.payload.find((item) => item.type === 'text')?.text
+    if (text) return `Message:\n${text}`
   }
 
+  if (node.type === 'addComment' && node.data.comment) {
+    return `Comment:\n${node.data.comment}`
+  }
+
+  if (node.description) {
+    return node.description
+  }
+    
   return undefined
 }
 

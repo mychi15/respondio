@@ -11,27 +11,31 @@ const props = defineProps<{ node: SendMessageNode }>()
 
 const flowStore = useFlowStore()
 
-const payload = reactive<SendMessagePayloadItem[]>([])
+const messageText = ref('')
+const attachments = reactive<string[]>([])
 const fileInput = ref<HTMLInputElement | null>(null)
 
 watch(
   () => props.node,
   (next) => {
-    payload.splice(0, payload.length, ...next.data.payload.map((item) => ({ ...item })))
+    messageText.value = next.data.payload.find((item) => item.type === 'text')?.text ?? ''
+    attachments.splice(
+      0,
+      attachments.length,
+      ...next.data.payload.filter((item) => item.type === 'attachment').map((item) => item.attachment),
+    )
   },
   { immediate: true },
 )
 
+const IMAGE_EXTENSION_PATTERN = /\.(png|jpe?g|gif|webp|svg)$/i
+
 function isImageAttachment(attachment: string): boolean {
-  return attachment.startsWith('data:image/')
+  return attachment.startsWith('data:image/') || IMAGE_EXTENSION_PATTERN.test(attachment)
 }
 
-function addTextItem() {
-  payload.push({ type: 'text', text: '' })
-}
-
-function removeItem(index: number) {
-  payload.splice(index, 1)
+function removeAttachment(index: number) {
+  attachments.splice(index, 1)
 }
 
 function openFilePicker() {
@@ -47,7 +51,7 @@ function handleFileChange(event: Event) {
     const reader = new FileReader()
     reader.onload = () => {
       if (typeof reader.result === 'string') {
-        payload.push({ type: 'attachment', attachment: reader.result })
+        attachments.push(reader.result)
       }
     }
     reader.readAsDataURL(file)
@@ -57,47 +61,55 @@ function handleFileChange(event: Event) {
 }
 
 function save() {
-  flowStore.updateSendMessagePayload(
-    props.node.id,
-    payload.map((item) => ({ ...item })),
-  )
+  const payload: SendMessagePayloadItem[] = []
+  const trimmedText = messageText.value.trim()
+  if (trimmedText) payload.push({ type: 'text', text: trimmedText })
+  for (const attachment of attachments) payload.push({ type: 'attachment', attachment })
+
+  flowStore.updateSendMessagePayload(props.node.id, payload)
 }
 
 defineExpose({ save })
 </script>
 
 <template>
-  <div class="flex flex-col gap-1.5">
-    <Label>Message</Label>
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-col gap-1.5">
+      <Label for="send-message-text">Message</Label>
+      <Textarea id="send-message-text" v-model="messageText" placeholder="Optional message text" />
+    </div>
 
-    <div v-for="(item, index) in payload" :key="index" class="flex items-start gap-1.5">
-      <Textarea
-        v-if="item.type === 'text'"
-        v-model="item.text"
-        placeholder="Message text"
-        class="flex-1"
-      />
-      <div v-else class="relative size-20 shrink-0 overflow-hidden rounded-md border border-gray-200">
-        <img
-          v-if="isImageAttachment(item.attachment)"
-          :src="item.attachment"
-          alt="Attachment preview"
-          class="size-full object-cover"
+    <div class="flex flex-col gap-1.5">
+      <Label>Attachments</Label>
+      <div class="flex flex-wrap gap-1.5">
+        <div
+          v-for="(attachment, index) in attachments"
+          :key="index"
+          class="relative size-20 shrink-0 overflow-hidden rounded-md border border-gray-200"
         >
-        <div v-else class="flex size-full flex-col items-center justify-center gap-1 bg-gray-50 text-gray-400">
-          <Paperclip class="size-5" />
-          <span class="text-[10px]">File</span>
+          <img
+            v-if="isImageAttachment(attachment)"
+            :src="attachment"
+            alt="Attachment preview"
+            class="size-full object-cover"
+          >
+          <div v-else class="flex size-full flex-col items-center justify-center gap-1 bg-gray-50 text-gray-400">
+            <Paperclip class="size-5" />
+            <span class="text-[10px]">File</span>
+          </div>
+
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            class="absolute right-0.5 top-0.5 bg-white/80 hover:bg-white"
+            @click="removeAttachment(index)"
+          >
+            <X />
+            <span class="sr-only">Remove attachment</span>
+          </Button>
         </div>
       </div>
 
-      <Button variant="ghost" size="icon-sm" class="shrink-0" @click="removeItem(index)">
-        <X />
-        <span class="sr-only">Remove</span>
-      </Button>
-    </div>
-
-    <div class="flex gap-1.5">
-      <Button variant="outline" size="sm" class="self-start" @click="addTextItem">Add text</Button>
       <Button variant="outline" size="sm" class="self-start" @click="openFilePicker">Add attachment</Button>
       <input ref="fileInput" type="file" class="hidden" multiple @change="handleFileChange">
     </div>

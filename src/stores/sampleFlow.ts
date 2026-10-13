@@ -14,7 +14,12 @@ export const sampleFlowNodes: FlowNode[] = [
     name: 'Welcome message',
     // description:
     //   'Greets the contact and explains how to get help from the team during business hours.',
-    data: { payload: [{ type: 'text', text: 'Hi! Thanks for reaching out.' }] },
+    data: {
+      payload: [
+        { type: 'text', text: 'Hi! Thanks for reaching out.' },
+        { type: 'attachment', attachment: '/favicon.svg' },
+      ],
+    },
   },
   {
     id: 3,

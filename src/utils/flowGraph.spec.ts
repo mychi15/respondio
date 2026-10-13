@@ -181,15 +181,34 @@ describe('buildAddNodePlaceholders', () => {
 })
 
 describe('getNodeDescription', () => {
-  it('prefers an explicit description override regardless of type', () => {
+  it('prefers an explicit description override for types without fixed auto-generated text', () => {
     const node: FlowNode = {
+      id: 1,
+      parentId: -1,
+      type: 'addComment',
+      description: 'custom note',
+      data: { comment: '' },
+    }
+    expect(getNodeDescription(node)).toBe('custom note')
+  })
+
+  it('ignores an explicit description override for dateTime and trigger, whose fixed auto-generated text always wins', () => {
+    const dateTime: FlowNode = {
       id: 1,
       parentId: -1,
       type: 'dateTime',
       description: 'custom note',
       data: { times: [], connectors: [], timezone: 'UTC', action: 'businessHours' },
     }
-    expect(getNodeDescription(node)).toBe('custom note')
+    const trigger: FlowNode = {
+      id: 2,
+      parentId: -1,
+      type: 'trigger',
+      description: 'custom note',
+      data: { type: 'conversationOpened', oncePerContact: true },
+    }
+    expect(getNodeDescription(dateTime)).toBe('Business Hours - UTC')
+    expect(getNodeDescription(trigger)).toBe('Conversation Opened')
   })
 
   it('describes a dateTime node by its timezone', () => {
@@ -212,12 +231,12 @@ describe('getNodeDescription', () => {
     expect(getNodeDescription(node)).toBe('Conversation Opened')
   })
 
-  it('describes a sendMessage node by joining its text payload items', () => {
+  it('describes a sendMessage node using its text payload item', () => {
     const node: FlowNode = {
       id: 1,
       parentId: -1,
       type: 'sendMessage',
-      data: { payload: [{ type: 'text', text: 'Hi' }, { type: 'text', text: 'there' }] },
+      data: { payload: [{ type: 'text', text: 'Hi there' }] },
     }
     expect(getNodeDescription(node)).toBe('Message:\nHi there')
   })
@@ -227,8 +246,23 @@ describe('getNodeDescription', () => {
     expect(getNodeDescription(node)).toBeUndefined()
   })
 
-  it('returns undefined for an addComment node with no description override', () => {
+  it('returns undefined for a sendMessage node with only attachments and no text', () => {
+    const node: FlowNode = {
+      id: 1,
+      parentId: -1,
+      type: 'sendMessage',
+      data: { payload: [{ type: 'attachment', attachment: '/favicon.svg' }] },
+    }
+    expect(getNodeDescription(node)).toBeUndefined()
+  })
+
+  it('describes an addComment node using its comment', () => {
     const node: FlowNode = { id: 1, parentId: -1, type: 'addComment', data: { comment: 'internal note' } }
+    expect(getNodeDescription(node)).toBe('Comment:\ninternal note')
+  })
+
+  it('returns undefined for an addComment node with no comment and no description override', () => {
+    const node: FlowNode = { id: 1, parentId: -1, type: 'addComment', data: { comment: '' } }
     expect(getNodeDescription(node)).toBeUndefined()
   })
 

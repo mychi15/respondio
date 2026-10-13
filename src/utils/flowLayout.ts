@@ -29,12 +29,16 @@ export function getNodeWidth(node: FlowNode): number {
  * Whether a node's description can grow to multiple wrapped lines (free-form
  * text: an explicit override, or a sendMessage preview), as opposed to the
  * short, fixed-format single-line text auto-generated for dateTime/trigger.
- * Only this kind of description needs the taller NODE_WITH_DESCRIPTION_HEIGHT
- * reserved for it.
  */
 export function hasVariableLengthDescription(node: FlowNode): boolean {
-  if (node.description) return true
-  return node.type === 'sendMessage' && Boolean(node.data.payload?.length) || Boolean(node.type === 'addComment' && node.data.comment)
+  if (node.type === 'dateTime' || node.type === 'trigger') {
+    return false
+  }
+  return (
+    (node.type === 'sendMessage' && node.data.payload.some((item) => item.type === 'text' && item.text))
+    || Boolean(node.type === 'addComment' && node.data.comment)
+    || Boolean(node.description)
+  )
 }
 
 export function getNodeHeight(node: FlowNode): number {

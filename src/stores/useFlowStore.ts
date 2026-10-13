@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import type { CreatableNodeType, FlowNode, NodeId } from '@/types/flow'
+import type { BusinessHoursNode, CreatableNodeType, FlowNode, NodeId, SendMessagePayloadItem } from '@/types/flow'
 import { buildAddNodePlaceholders, buildEdgesFromNodes, toVueFlowNodes } from '@/utils/flowGraph'
 import { computeNodePositions } from '@/utils/flowLayout'
 import { generateNodeId } from '@/utils/helpers'
@@ -31,7 +31,9 @@ function createDataForType(type: CreatableNodeType): FlowNode['data'] {
 }
 
 export const useFlowStore = defineStore('flow', () => {
-  const nodes = ref<FlowNode[]>(sampleFlowNodes)
+  // Cloned so pushes/mutations don't leak into the shared sampleFlowNodes
+  // fixture (and therefore into other tests/store instances importing it).
+  const nodes = ref<FlowNode[]>(structuredClone(sampleFlowNodes))
 
   const nodePositions = computed(() => computeNodePositions(nodes.value))
   const vueFlowNodes = computed(() => toVueFlowNodes(nodes.value, nodePositions.value))
@@ -59,5 +61,55 @@ export const useFlowStore = defineStore('flow', () => {
     return newNode
   }
 
-  return { nodes, vueFlowNodes, vueFlowEdges, addNodePlaceholders, createNode }
+  function updateNode(id: NodeId, patch: { name?: string; description?: string }): void {
+    const node = nodes.value.find((candidate) => candidate.id === id)
+    if (!node) return
+    Object.assign(node, patch)
+  }
+
+  function updateBusinessHours(id: NodeId, patch: Partial<Pick<BusinessHoursNode['data'], 'times' | 'timezone'>>): void {
+    const node = nodes.value.find((candidate) => candidate.id === id)
+    if (!node || node.type !== 'dateTime') return
+    Object.assign(node.data, patch)
+  }
+
+  function updateSendMessagePayload(id: NodeId, payload: SendMessagePayloadItem[]): void {
+    const node = nodes.value.find((candidate) => candidate.id === id)
+    if (!node || node.type !== 'sendMessage') return
+    node.data.payload = payload
+  }
+
+  function updateComment(id: NodeId, comment: string): void {
+    const node = nodes.value.find((candidate) => candidate.id === id)
+    if (!node || node.type !== 'addComment') return
+    node.data.comment = comment
+  }
+
+  function deleteNode(id: NodeId): void {
+    const idsToDelete = new Set<NodeId>([id])
+    let grew = true
+    while (grew) {
+      grew = false
+      for (const node of nodes.value) {
+        if (!idsToDelete.has(node.id) && idsToDelete.has(node.parentId)) {
+          idsToDelete.add(node.id)
+          grew = true
+        }
+      }
+    }
+    nodes.value = nodes.value.filter((node) => !idsToDelete.has(node.id))
+  }
+
+  return {
+    nodes,
+    vueFlowNodes,
+    vueFlowEdges,
+    addNodePlaceholders,
+    createNode,
+    updateNode,
+    updateBusinessHours,
+    updateSendMessagePayload,
+    updateComment,
+    deleteNode,
+  }
 })
