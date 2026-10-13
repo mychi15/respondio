@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onUnmounted, useId, useTemplateRef, watch } from 'vue'
 import { ExternalLink, X } from '@lucide/vue'
-import { FLOW_NODE_TYPE_LABELS } from '@/types/flow'
+import { FLOW_NODE_TYPE_LABELS, NODE_TYPE_EDGE_OPTIONS } from '@/types/flow'
 import { NODE_ICON_MAP } from '@/components/icons'
 import { useFlowStore } from '@/stores/useFlowStore'
 import { useNodeDrawer } from '@/composables/useNodeDrawer'
@@ -15,6 +15,8 @@ const flowStore = useFlowStore()
 const node = computed(() => flowStore.nodes.find((candidate) => String(candidate.id) === String(drawer.selectedNodeId.value)))
 
 const titleIcon = computed(() => (node.value && node.value.type !== 'dateTimeConnector' ? NODE_ICON_MAP[node.value.type] : undefined))
+
+const titleIconColor = computed(() => (node.value ? NODE_TYPE_EDGE_OPTIONS[node.value.type].color : undefined))
 
 const titleLabel = computed(() => (node.value ? FLOW_NODE_TYPE_LABELS[node.value.type] : 'Node details'))
 
@@ -83,7 +85,7 @@ onUnmounted(() => {
     />
     <div class="flex shrink-0 items-center justify-between gap-2 border-b border-gray-200 px-4 py-3">
       <h2 :id="titleId" ref="title" tabindex="-1" class="flex items-center gap-1.5 text-sm font-semibold text-gray-900 outline-none">
-        <component :is="titleIcon" v-if="titleIcon" class="size-4 shrink-0 text-gray-500" />
+        <component :is="titleIcon" v-if="titleIcon" class="size-4 shrink-0" :style="{ color: titleIconColor }" />
         {{ titleLabel }}
       </h2>
       <div class="flex items-center gap-1">

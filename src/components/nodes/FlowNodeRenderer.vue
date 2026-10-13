@@ -3,7 +3,7 @@ import type { NodeProps } from '@vue-flow/core'
 import { computed, ref } from 'vue'
 import { FLOW_NODE_TYPE_LABELS, NODE_TYPE_EDGE_OPTIONS } from '@/types/flow'
 import type { FlowNode } from '@/types/flow'
-import { getNodeDescription, isInteractiveNodeType } from '@/utils/flowGraph'
+import { getNodeDescription, getNodeEdgeColor, isInteractiveNodeType } from '@/utils/flowGraph'
 import { NODE_ICON_MAP } from '@/components/icons'
 import { CONNECTOR_WIDTH, getNodeHeight, NODE_WIDTH } from '@/utils/flowLayout'
 
@@ -20,7 +20,15 @@ const isHovered = ref(false)
 const edgeColor = computed(() => NODE_TYPE_EDGE_OPTIONS[props.data.type].color)
 const edgeHoverColor = computed(() => NODE_TYPE_EDGE_OPTIONS[props.data.type].hoverColor)
 
-const borderColor = computed(() => (interactive.value && isHovered.value && !props.selected ? edgeHoverColor.value : edgeColor.value))
+const NEUTRAL_BORDER_COLOR = '#e2e5ea'
+
+const borderColor = computed(() => {
+  if (!interactive.value) return NEUTRAL_BORDER_COLOR
+  if (props.selected) return edgeColor.value
+  return isHovered.value ? edgeHoverColor.value : NEUTRAL_BORDER_COLOR
+})
+
+const connectorColor = computed(() => getNodeEdgeColor(props.data))
 
 const iconComponent = computed(() =>
   props.data.type === 'dateTimeConnector' ? undefined : NODE_ICON_MAP[props.data.type],
@@ -48,7 +56,13 @@ const cardStyle = computed(() => ({
   boxShadow: props.selected ? `0 0 0 2px ${edgeColor.value}4D` : undefined,
 }))
 
-const connectorClasses = ['rounded-md bg-blue-50 px-3 py-1 text-center text-sm font-semibold text-blue-500']
+const connectorClasses = ['rounded-md px-3 py-1 text-center text-sm font-semibold']
+
+const connectorStyle = computed(() => ({
+  width: `${CONNECTOR_WIDTH}px`,
+  color: connectorColor.value,
+  backgroundColor: `${connectorColor.value}1A`,
+}))
 
 function handleClick() {
   emit('click', props.data.id)
@@ -56,7 +70,7 @@ function handleClick() {
 </script>
 
 <template>
-  <div v-if="isConnector" :class="connectorClasses" :style="{ width: `${CONNECTOR_WIDTH}px` }">{{ title }}</div>
+  <div v-if="isConnector" :class="connectorClasses" :style="connectorStyle">{{ title }}</div>
   <div
     v-else
     :class="cardClasses"
@@ -66,7 +80,12 @@ function handleClick() {
     v-on="interactive ? { click: handleClick } : {}"
   >
     <div class="flex items-center gap-2 border-b border-gray-200 px-3 py-2">
-      <component :is="iconComponent" class="shrink-0 text-gray-500" />
+      <span
+        class="grid size-6 shrink-0 place-items-center rounded-md"
+        :style="{ color: edgeColor, backgroundColor: `${edgeColor}1F` }"
+      >
+        <component :is="iconComponent" class="size-3.5" />
+      </span>
       <span class="truncate text-sm font-medium text-gray-900">{{ title }}</span>
     </div>
     <p v-if="description" class="line-clamp-3 whitespace-pre-line text-sm text-gray-500 mx-3 my-2">

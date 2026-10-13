@@ -74,10 +74,10 @@ export interface NodeEdgeOptions {
 }
 
 export const NODE_TYPE_EDGE_OPTIONS: Record<FlowNodeType, NodeEdgeOptions> = {
-  trigger: { addable: true, color: '#64748b', hoverColor: '#94a3b8' },
-  sendMessage: { addable: true, color: '#3b82f6', hoverColor: '#60a5fa' },
-  addComment: { addable: true, color: '#a855f7', hoverColor: '#c084fc' },
-  dateTime: { addable: false, color: '#f59e0b', hoverColor: '#fbbf24' },
-  dateTimeConnector: { addable: true, color: '#22c55e', hoverColor: '#4ade80' },
+  trigger: { addable: true, color: '#a46e9f', hoverColor: '#cdafca' },
+  sendMessage: { addable: true, color: '#5e81ac', hoverColor: '#a6bad1' },
+  addComment: { addable: true, color: '#4f9a96', hoverColor: '#9ec7c5' },
+  dateTime: { addable: false, color: '#d08770', hoverColor: '#e5bdb0' },
+  dateTimeConnector: { addable: true, color: '#7fa36b', hoverColor: '#b9ccae' },
 }
 

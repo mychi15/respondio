@@ -38,7 +38,7 @@ describe('buildEdgesFromNodes', () => {
       source: '1',
       target: '2',
       type: 'customEdge',
-      data: { kind: 'insert', sourceId: 1, targetId: 2, hoverColor: '#64748b', addable: true },
+      data: { kind: 'insert', sourceId: 1, targetId: 2, hoverColor: '#a46e9f', addable: true },
     })
   })
 
@@ -49,14 +49,14 @@ describe('buildEdgesFromNodes', () => {
       source: '3',
       target: '4',
       type: 'customEdge',
-      data: { kind: 'insert', sourceId: 3, targetId: 4, hoverColor: '#f59e0b', addable: false },
+      data: { kind: 'insert', sourceId: 3, targetId: 4, hoverColor: '#d08770', addable: false },
     })
     expect(edges).toContainEqual({
       id: 'e-3-5',
       source: '3',
       target: '5',
       type: 'customEdge',
-      data: { kind: 'insert', sourceId: 3, targetId: 5, hoverColor: '#f59e0b', addable: false },
+      data: { kind: 'insert', sourceId: 3, targetId: 5, hoverColor: '#d08770', addable: false },
     })
   })
 })
@@ -172,7 +172,7 @@ describe('buildAddNodePlaceholders', () => {
       source: '4',
       target: 'add-4',
       type: 'customEdge',
-      data: { kind: 'add', sourceId: 4, parentId: 4, hoverColor: '#22c55e', addable: true },
+      data: { kind: 'add', sourceId: 4, parentId: 4, hoverColor: '#7fa36b', addable: true },
     })
   })
 
@@ -180,8 +180,8 @@ describe('buildAddNodePlaceholders', () => {
     const positions = computeNodePositions(sample)
     const { edges } = buildAddNodePlaceholders(sample, positions)
 
-    expect(edges.find((edge) => edge.id === 'add-edge-4')?.data?.hoverColor).toBe('#22c55e')
-    expect(edges.find((edge) => edge.id === 'add-edge-5')?.data?.hoverColor).toBe('#ef4444')
+    expect(edges.find((edge) => edge.id === 'add-edge-4')?.data?.hoverColor).toBe('#7fa36b')
+    expect(edges.find((edge) => edge.id === 'add-edge-5')?.data?.hoverColor).toBe('#bf616a')
   })
 
   it('places the placeholder half the vertical spacing below the leaf', () => {

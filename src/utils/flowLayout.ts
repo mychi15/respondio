@@ -172,13 +172,13 @@ export function positionBelow(parent: FlowNode, child: FlowNode, xOffset = 0): F
   }
 }
 
-/** Moves `rootId` and all of its descendants down by `dy`. */
-export function shiftSubtree(nodes: FlowNode[], rootId: NodeId, dy: number): void {
+/** Moves `rootId` and all of its descendants down by `dy` (and sideways by `dx`). */
+export function shiftSubtree(nodes: FlowNode[], rootId: NodeId, dy: number, dx = 0): void {
   const childrenByParent = groupChildrenByParent(nodes)
   const stack = nodes.filter((node) => node.id === rootId)
   while (stack.length > 0) {
     const node = stack.pop()!
-    if (node.position) node.position = { x: node.position.x, y: node.position.y + dy }
+    if (node.position) node.position = { x: node.position.x + dx, y: node.position.y + dy }
     stack.push(...(childrenByParent.get(node.id) ?? []))
   }
 }

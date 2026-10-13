@@ -16,7 +16,7 @@ export interface AddEdgeData {
 
 export function getNodeEdgeColor(node: FlowNode): string {
   if (node.type === 'dateTimeConnector') {
-    return node.data.connectorType === 'failure' ? '#ef4444' : NODE_TYPE_EDGE_OPTIONS.dateTimeConnector.color
+    return node.data.connectorType === 'failure' ? '#bf616a' : NODE_TYPE_EDGE_OPTIONS.dateTimeConnector.color
   }
 
   return NODE_TYPE_EDGE_OPTIONS[node.type].color

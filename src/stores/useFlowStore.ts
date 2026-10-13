@@ -127,14 +127,23 @@ export const useFlowStore = defineStore('flow', () => {
       const source = nodes.value.find((node) => node.id === attachment.sourceId)
       if (target?.position) {
         // Take the target's slot (top-aligned) and push its subtree down to
-        // make room, including the connector row a dateTime node brings.
+        // make room. A dateTime node also brings a connector row, and the
+        // target moves sideways to sit under the success connector.
         newNode.position = { x: target.position.x, y: target.position.y - getNodeHeight(target) / 2 + getNodeHeight(newNode) / 2 }
-        const connectorRow = newNode.type === 'dateTime' ? CONNECTOR_HEIGHT + DEFAULT_VERTICAL_SPACING : 0
-        shiftSubtree(nodes.value, target.id, getNodeHeight(newNode) + DEFAULT_VERTICAL_SPACING + connectorRow)
+        const isDateTime = newNode.type === 'dateTime'
+        const connectorRow = isDateTime ? CONNECTOR_HEIGHT + DEFAULT_VERTICAL_SPACING : 0
+        shiftSubtree(
+          nodes.value,
+          target.id,
+          getNodeHeight(newNode) + DEFAULT_VERTICAL_SPACING + connectorRow,
+          isDateTime ? -HORIZONTAL_SPACING / 2 : 0,
+        )
       } else {
         newNode.position = source ? positionBelow(source, newNode) : { x: 0, y: 0 }
       }
-      if (target) target.parentId = newNode.id
+      // A dateTime node only takes its two connectors as children, so the
+      // target is re-attached to the success connector below instead.
+      if (target && newNode.type !== 'dateTime') target.parentId = newNode.id
     }
 
     nodes.value.push(newNode)
@@ -153,6 +162,11 @@ export const useFlowStore = defineStore('flow', () => {
       connectors[1].position = positionBelow(newNode, connectors[1], HORIZONTAL_SPACING / 2)
       nodes.value.push(...connectors)
       newNode.data.connectors = [successId, failureId]
+
+      if (attachment.mode === 'insert') {
+        const target = nodes.value.find((node) => node.id === attachment.targetId)
+        if (target) target.parentId = successId
+      }
     }
 
     // Not awaited: optimistic UI, failures surface via persist()'s toast.

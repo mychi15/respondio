@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { reactive } from 'vue'
 import type { CreatableNodeType, NodeId } from '@/types/flow'
-import { FLOW_NODE_TYPE_LABELS } from '@/types/flow'
+import { FLOW_NODE_TYPE_LABELS, NODE_TYPE_EDGE_OPTIONS } from '@/types/flow'
 import { NODE_ICON_MAP } from '@/components/icons'
 import { isCreateNodeFormValid, validateCreateNodeForm } from '@/utils/nodeFormValidation'
 import type { CreateNodeFormInput } from '@/utils/nodeFormValidation'
@@ -46,7 +46,7 @@ function handleSubmit() {
         </SelectTrigger>
         <SelectContent>
           <SelectItem v-for="type in props.types" :key="type" :value="type">
-            <component :is="NODE_ICON_MAP[type]" class="size-3.5" />
+            <component :is="NODE_ICON_MAP[type]" class="size-3.5" :style="{ color: NODE_TYPE_EDGE_OPTIONS[type].color }" />
             {{ FLOW_NODE_TYPE_LABELS[type] }}
           </SelectItem>
         </SelectContent>

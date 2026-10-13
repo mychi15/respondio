@@ -1,7 +1,7 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { saveFlow } from '@/api/flowApi'
-import { computeNodePositions, DEFAULT_VERTICAL_SPACING, getNodeHeight, HORIZONTAL_SPACING } from '@/utils/flowLayout'
+import { computeNodePositions, DEFAULT_VERTICAL_SPACING, getNodeHeight, HORIZONTAL_SPACING, positionBelow } from '@/utils/flowLayout'
 import { useFlowStore } from './useFlowStore'
 import mockFlowNodes from '../../api/_fixtures/mockFlow'
 
@@ -57,6 +57,18 @@ describe('useFlowStore', () => {
     const inserted = store.nodes.at(-1)!
     expect(target.parentId).toBe(inserted.id)
     expect(inserted.parentId).toBe('b7c8d9')
+  })
+
+  it('createNode "insert" for "dateTime" re-attaches the target under the success connector', () => {
+    const store = useFlowStore()
+    const created = store.createNode({ name: 'Hours', type: 'dateTime' }, { mode: 'insert', sourceId: 'b7c8d9', targetId: 'f3a4b5' })
+    if (created.type !== 'dateTime') throw new Error('expected a dateTime node')
+
+    const children = store.nodes.filter((node) => node.parentId === created.id)
+    expect(children.map((node) => node.type)).toEqual(['dateTimeConnector', 'dateTimeConnector'])
+
+    const [successId] = created.data.connectors
+    expect(store.nodes.find((node) => node.id === 'f3a4b5')!.parentId).toBe(successId)
   })
 
   it('createNode with mode "root" appends an independent trigger root with no name', () => {
@@ -196,6 +208,16 @@ describe('useFlowStore positions and history', () => {
     expect(byId(store, 'f3a4b5').position).toEqual({ x: targetBefore.x, y: targetBefore.y + dy })
     expect(byId(store, 'a9b0c1').position).toEqual({ x: descendantBefore.x, y: descendantBefore.y + dy })
     expect(byId(store, 'c6d7e8').position).toEqual(siblingBefore)
+  })
+
+  it('createNode "insert" for "dateTime" moves the target subtree under the success connector', () => {
+    const store = loadedStore()
+    const created = store.createNode({ name: 'Hours', type: 'dateTime' }, { mode: 'insert', sourceId: 'b7c8d9', targetId: 'f3a4b5' })
+    if (created.type !== 'dateTime') throw new Error('expected a dateTime node')
+
+    const success = byId(store, created.data.connectors[0])
+    const target = byId(store, 'f3a4b5')
+    expect(target.position).toEqual(positionBelow(success, target))
   })
 
   it('createNode "root" places a new trigger to the right of every node', () => {
