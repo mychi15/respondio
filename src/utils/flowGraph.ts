@@ -39,12 +39,11 @@ export function canAddChildTo(node: FlowNode, childrenByParent: Map<NodeId, Flow
   return children.length < maxChildren
 }
 
-/**
- * The single source of truth for whether (and what) description text a node
- * renders. Shared between FlowNodeRenderer (what to display) and the layout
- * math (how much vertical space to reserve), so the two never drift apart.
- */
 export function getNodeDescription(node: FlowNode): string | undefined {
+  if (node.description) {
+    return node.description
+  }
+
   if (node.type === 'dateTime') {
     return `Business Hours - ${node.data.timezone}`
   }
@@ -62,10 +61,6 @@ export function getNodeDescription(node: FlowNode): string | undefined {
     return `Comment:\n${node.data.comment}`
   }
 
-  if (node.description) {
-    return node.description
-  }
-    
   return undefined
 }
 

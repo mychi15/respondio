@@ -23,18 +23,21 @@ export function getNodeWidth(node: FlowNode): number {
 }
 
 /**
- * Whether a node's description can grow to multiple wrapped lines (free-form
- * text: an explicit override, or a sendMessage preview), as opposed to the
+ * Whether a node's card text can grow to multiple wrapped lines (free-form
+ * text: its own description, or a message/comment preview), as opposed to the
  * short, fixed-format single-line text auto-generated for dateTime/trigger.
+ * Mirrors getNodeDescription's order: the description wins for every type.
  */
 export function hasVariableLengthDescription(node: FlowNode): boolean {
+  if (node.description) {
+    return true
+  }
   if (node.type === 'dateTime' || node.type === 'trigger') {
     return false
   }
   return (
     (node.type === 'sendMessage' && node.data.payload.some((item) => item.type === 'text' && item.text))
     || Boolean(node.type === 'addComment' && node.data.comment)
-    || Boolean(node.description)
   )
 }
 

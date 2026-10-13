@@ -197,7 +197,7 @@ describe('buildAddNodePlaceholders', () => {
 })
 
 describe('getNodeDescription', () => {
-  it('prefers an explicit description override for types without fixed auto-generated text', () => {
+  it('shows the node description when it has no other content', () => {
     const node: FlowNode = {
       id: 1,
       parentId: -1,
@@ -208,7 +208,7 @@ describe('getNodeDescription', () => {
     expect(getNodeDescription(node)).toBe('custom note')
   })
 
-  it('ignores an explicit description override for dateTime and trigger, whose fixed auto-generated text always wins', () => {
+  it('shows the node description over the auto-generated text for dateTime and trigger', () => {
     const dateTime: FlowNode = {
       id: 1,
       parentId: -1,
@@ -223,8 +223,32 @@ describe('getNodeDescription', () => {
       description: 'custom note',
       data: { type: 'conversationOpened', oncePerContact: true },
     }
-    expect(getNodeDescription(dateTime)).toBe('Business Hours - UTC')
-    expect(getNodeDescription(trigger)).toBe('Conversation Opened')
+    expect(getNodeDescription(dateTime)).toBe('custom note')
+    expect(getNodeDescription(trigger)).toBe('custom note')
+  })
+
+  it('shows the node description over the message text or comment', () => {
+    const sendMessage: FlowNode = {
+      id: 1,
+      parentId: -1,
+      type: 'sendMessage',
+      description: 'Greets the contact',
+      data: { payload: [{ type: 'text', text: 'Hi there' }] },
+    }
+    const addComment: FlowNode = {
+      id: 2,
+      parentId: -1,
+      type: 'addComment',
+      description: 'Internal note',
+      data: { comment: 'Check VIP status' },
+    }
+    expect(getNodeDescription(sendMessage)).toBe('Greets the contact')
+    expect(getNodeDescription(addComment)).toBe('Internal note')
+  })
+
+  it('falls back to the comment when there is no description', () => {
+    const node: FlowNode = { id: 1, parentId: -1, type: 'addComment', data: { comment: 'Check VIP status' } }
+    expect(getNodeDescription(node)).toBe('Comment:\nCheck VIP status')
   })
 
   it('describes a dateTime node by its timezone', () => {

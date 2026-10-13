@@ -115,7 +115,7 @@ describe('computeNodePositions', () => {
 })
 
 describe('hasVariableLengthDescription', () => {
-  it('is true whenever an explicit description override is set, for types without a fixed auto-generated text', () => {
+  it('is true whenever the node has a description', () => {
     const addComment: FlowNode = {
       id: 1,
       parentId: -1,
@@ -126,7 +126,7 @@ describe('hasVariableLengthDescription', () => {
     expect(hasVariableLengthDescription(addComment)).toBe(true)
   })
 
-  it('is false for dateTime and trigger nodes even with an explicit description override, since their auto-generated text always takes priority', () => {
+  it('is true for dateTime and trigger nodes with a description, since it replaces their single-line auto-generated text', () => {
     const dateTime: FlowNode = {
       id: 1,
       parentId: -1,
@@ -139,6 +139,23 @@ describe('hasVariableLengthDescription', () => {
       parentId: -1,
       type: 'trigger',
       description: 'custom note',
+      data: { type: 'conversationOpened', oncePerContact: true },
+    }
+    expect(hasVariableLengthDescription(dateTime)).toBe(true)
+    expect(hasVariableLengthDescription(trigger)).toBe(true)
+  })
+
+  it('is false for dateTime and trigger nodes without a description', () => {
+    const dateTime: FlowNode = {
+      id: 1,
+      parentId: -1,
+      type: 'dateTime',
+      data: { times: [], connectors: [], timezone: 'UTC', action: 'businessHours' },
+    }
+    const trigger: FlowNode = {
+      id: 2,
+      parentId: -1,
+      type: 'trigger',
       data: { type: 'conversationOpened', oncePerContact: true },
     }
     expect(hasVariableLengthDescription(dateTime)).toBe(false)
