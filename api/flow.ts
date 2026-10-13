@@ -1,6 +1,8 @@
 import { put } from '@vercel/blob'
 import mockFlow from './_fixtures/mockFlow.js'
 
+export const config = { runtime: 'edge' }
+
 const DEFAULT_KEY = 'flows/flow.json'
 
 const CORS_HEADERS = {
