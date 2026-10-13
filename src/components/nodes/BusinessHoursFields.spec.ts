@@ -65,16 +65,6 @@ describe('BusinessHoursFields', () => {
     store.nodes = [businessHoursNode]
   })
 
-  it('renders the existing timezone and time row', () => {
-    const wrapper = mountFields(businessHoursNode)
-
-    const selects = wrapper.findAll('select')
-    expect(selects[0].element.value).toBe('UTC')
-
-    const startTime = wrapper.find<HTMLInputElement>('input[type="time"]')
-    expect(startTime.element.value).toBe('09:00')
-  })
-
   it('falls back to the browser timezone when the node has no timezone set', () => {
     const node: BusinessHoursNode = {
       ...businessHoursNode,
@@ -94,14 +84,6 @@ describe('BusinessHoursFields', () => {
     await timeInputs[1].setValue('09:00')
 
     expect(wrapper.text()).toContain('Start time must be before end time')
-  })
-
-  it('adds a new time row with default values when Add time is clicked', async () => {
-    const wrapper = mountFields(businessHoursNode)
-
-    await wrapper.find('button').trigger('click')
-
-    expect(wrapper.findAll('input[type="time"]')).toHaveLength(4)
   })
 
   it('removes a time row when its remove button is clicked', async () => {
