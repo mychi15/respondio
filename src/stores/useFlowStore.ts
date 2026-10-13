@@ -1,9 +1,11 @@
 import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
+import { computed, ref, toRaw } from 'vue'
 import type { BusinessHoursNode, ConnectorNode, CreatableNodeType, FlowNode, NodeId, SendMessagePayloadItem } from '@/types/flow'
 import { buildAddNodePlaceholders, buildEdgesFromNodes, toVueFlowNodes } from '@/utils/flowGraph'
 import { computeNodePositions } from '@/utils/flowLayout'
 import { generateNodeId } from '@/utils/helpers'
+import { saveFlow } from '@/api/flowApi'
+import { useToast } from '@/composables/useToast'
 import { sampleFlowNodes } from './sampleFlow'
 
 export type CreateNodeAttachment =
@@ -40,6 +42,28 @@ export const useFlowStore = defineStore('flow', () => {
   const vueFlowEdges = computed(() => buildEdgesFromNodes(nodes.value))
   const addNodePlaceholders = computed(() => buildAddNodePlaceholders(nodes.value, nodePositions.value))
 
+  const toast = useToast()
+
+  // Chained so saves always reach the server in the order they were
+  // triggered. Without this, two quick persist() calls could race over the
+  // network and the second save could arrive before the first, so the
+  // older data would overwrite the newer data.
+  let pendingSave: Promise<void> = Promise.resolve()
+
+  function persist(): Promise<void> {
+    const attempt = pendingSave.catch(() => {}).then(() => saveFlow(nodes.value))
+    pendingSave = attempt.catch(() => toast.show('Failed to save changes. Please try again.'))
+    return attempt
+  }
+
+  function setNodes(next: FlowNode[]): void {
+    // Cloned: `next` may be Vue Query's reactive cache data, and the store
+    // needs a plain mutable array to push/splice into. toRaw() strips the
+    // reactive Proxy wrapper first — structuredClone can't clone a Proxy
+    // directly, but the underlying storage it unwraps to is already plain.
+    nodes.value = structuredClone(toRaw(next))
+  }
+
   function createNode(input: CreateNodeInput, attachment: CreateNodeAttachment): FlowNode {
     const existingIds = new Set(nodes.value.map((node) => node.id))
     const parentId = attachment.mode === 'root' ? -1 : attachment.mode === 'add' ? attachment.parentId : attachment.sourceId
@@ -73,6 +97,10 @@ export const useFlowStore = defineStore('flow', () => {
       newNode.data.connectors = [successId, failureId]
     }
 
+    // Deliberately not awaiting persist() here: optimistic UI, the store is
+    // already updated. If the save fails, there's no automatic retry — the
+    // user just sees the failure toast from persist()'s catch.
+    persist()
     return newNode
   }
 
@@ -113,6 +141,7 @@ export const useFlowStore = defineStore('flow', () => {
       }
     }
     nodes.value = nodes.value.filter((node) => !idsToDelete.has(node.id))
+    persist()
   }
 
   return {
@@ -120,11 +149,13 @@ export const useFlowStore = defineStore('flow', () => {
     vueFlowNodes,
     vueFlowEdges,
     addNodePlaceholders,
+    setNodes,
     createNode,
     updateNode,
     updateBusinessHours,
     updateSendMessagePayload,
     updateComment,
     deleteNode,
+    persist,
   }
 })

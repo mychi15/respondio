@@ -13,7 +13,7 @@ const sendMessageNode: SendMessageNode = {
   data: {
     payload: [
       { type: 'text', text: 'Hi! Thanks for reaching out.' },
-      { type: 'attachment', attachment: 'data:image/png;base64,abc123' },
+      { type: 'attachment', attachment: 'https://example-store.public.blob.vercel-storage.com/attachment-abc123.png' },
     ],
   },
 }
@@ -49,7 +49,7 @@ describe('SendMessageFields', () => {
 
     const img = wrapper.find('img')
     expect(img.exists()).toBe(true)
-    expect(img.attributes('src')).toBe('data:image/png;base64,abc123')
+    expect(img.attributes('src')).toBe('https://example-store.public.blob.vercel-storage.com/attachment-abc123.png')
   })
 
   it('does not persist edits until save is called', async () => {
@@ -73,7 +73,7 @@ describe('SendMessageFields', () => {
     const payload = (store.nodes[0] as SendMessageNode).data.payload
     expect(payload).toEqual([
       { type: 'text', text: 'Updated text' },
-      { type: 'attachment', attachment: 'data:image/png;base64,abc123' },
+      { type: 'attachment', attachment: 'https://example-store.public.blob.vercel-storage.com/attachment-abc123.png' },
     ])
   })
 
@@ -85,7 +85,21 @@ describe('SendMessageFields', () => {
     ;(wrapper.vm as unknown as { save: () => void }).save()
 
     const payload = (store.nodes[0] as SendMessageNode).data.payload
-    expect(payload).toEqual([{ type: 'attachment', attachment: 'data:image/png;base64,abc123' }])
+    expect(payload).toEqual([{ type: 'attachment', attachment: 'https://example-store.public.blob.vercel-storage.com/attachment-abc123.png' }])
+  })
+
+  it('uploads a picked file and appends it as an attachment once the upload resolves', async () => {
+    const wrapper = mountFields(sendMessageNode)
+
+    const file = new File(['content'], 'photo.png', { type: 'image/png' })
+    const input = wrapper.find('input[type="file"]')
+    Object.defineProperty(input.element, 'files', { value: [file] })
+    await input.trigger('change')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    await wrapper.vm.$nextTick()
+
+    const images = wrapper.findAll('img')
+    expect(images.some((img) => img.attributes('src') === 'https://example.com/mock-attachment.png')).toBe(true)
   })
 
   it('removes an attachment when its remove button is clicked', async () => {

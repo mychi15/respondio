@@ -1,3 +1,4 @@
+import { VueQueryPlugin } from '@tanstack/vue-query'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it } from 'vitest'
@@ -14,7 +15,7 @@ async function mountAt(nodeId: string | number) {
     ],
   })
   await router.push(`/node/${nodeId}`)
-  return { router, wrapper: mount(NodeDetailView, { global: { plugins: [router] } }) }
+  return { router, wrapper: mount(NodeDetailView, { global: { plugins: [router, VueQueryPlugin] } }) }
 }
 
 describe('NodeDetailView', () => {

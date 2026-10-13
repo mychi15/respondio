@@ -152,14 +152,14 @@ type FlowNode =
 - [x] Composables per concern: `useAttachments()`, `useComments()`, `useBusinessHours()` — implemented instead as per-type field components (`SendMessageFields.vue`, `AddCommentFields.vue`, `BusinessHoursFields.vue`) rather than standalone composables
 
 ### M5 — Data Layer / Persistence
-- [ ] Define API contract from the finalized schema (fetch/save flow + nodes)
-- [ ] Author **mock schema fixture**: full flow sample with every node type represented; `description` is optional per node, so include both nodes with a populated `description` and nodes without one (matching real-world data); uploaded to **Vercel Blob** as the static source-of-truth JSON for e2e testing
-- [ ] Serverless function `POST /api/flow` (or similar): reads/writes the flow JSON blob — update-in-place on every mutation (create/update/delete node, including cascade deletes)
-- [ ] Serverless function `POST /api/upload`: accepts a file, uploads to Vercel Blob, returns the resulting CDN URL to be stored in `payload[].attachment`
-- [ ] Wire Vue Query for fetching flow data (load on canvas mount, from the Blob-hosted JSON via the read endpoint)
-- [ ] Wire Vue Query mutations for create/update/delete node, attachments, comments, business hours — each mutation persists the full updated flow JSON back to Blob via `/api/flow`
-- [ ] Optimistic updates + cache invalidation strategy
-- [ ] Error/loading states surfaced in UI (including upload failure/progress)
+- [x] Define API contract from the finalized schema (fetch/save flow + nodes) — `GET`/`POST /api/flow?key=`
+- [x] Author **mock schema fixture**: full flow sample with every node type represented; `description` is optional per node, so include both nodes with a populated `description` and nodes without one (matching real-world data); uploaded to **Vercel Blob** as the static source-of-truth JSON for e2e testing — `api/_fixtures/mockFlow.json`, seeded to Blob lazily on first `GET` of a missing key
+- [x] Serverless function `POST /api/flow` (or similar): reads/writes the flow JSON blob — update-in-place on every mutation (create/update/delete node, including cascade deletes)
+- [x] Serverless function `POST /api/upload`: accepts a file, uploads to Vercel Blob, returns the resulting CDN URL to be stored in `payload[].attachment` — implemented as a Vercel Blob client-upload token endpoint (`handleUpload`) rather than a server-side proxy, to avoid the serverless body-size limit
+- [x] Wire Vue Query for fetching flow data (load on canvas mount, from the Blob-hosted JSON via the read endpoint)
+- [x] Wire Vue Query mutations for create/update/delete node, attachments, comments, business hours — each mutation persists the full updated flow JSON back to Blob via `/api/flow` — implemented as the store synchronously mutating local state (as before) then firing a direct `saveFlow()` persist call, rather than full `useMutation` wrapping, per the simple/MVP strategy decided during planning
+- [x] Optimistic updates + cache invalidation strategy — simple strategy: store stays source of truth, mutates immediately, persists after; no rollback on failure (toast only) — accepted MVP tradeoff, not full `onMutate`/`onError` rollback
+- [x] Error/loading states surfaced in UI (including upload failure/progress) — canvas loading placeholder, toast on fetch/save/upload failure, per-attachment uploading spinner tile
 - [ ] Playwright E2E golden path driven against the Blob-hosted mock schema: load flow → create node → edit title/description → upload attachment → edit type-specific fields → delete (cascade) → verify canvas + drawer state + updated Blob JSON
 
 ### M6 — Polish & Hardening

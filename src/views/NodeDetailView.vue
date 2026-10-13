@@ -4,9 +4,12 @@ import { useRoute, useRouter } from 'vue-router'
 import NodeDetailsPanel from '@/components/nodes/NodeDetailsPanel.vue'
 import ToastNotification from '@/components/ToastNotification.vue'
 import { Button } from '@/components/ui/button'
+import { useFlowQuery } from '@/composables/useFlowQuery'
 
 const route = useRoute()
 const router = useRouter()
+
+useFlowQuery()
 
 const nodeId = computed(() => route.params.nodeId as string)
 

@@ -39,13 +39,22 @@ const typeFieldsRef = ref<{ save?: () => void } | null>(null)
 
 const toast = useToast()
 
-function saveChanges() {
+const saving = ref(false)
+
+async function saveChanges() {
   if (!node.value) return
   flowStore.updateNode(node.value.id, { name: form.name.trim(), description: form.description.trim() || undefined })
   typeFieldsRef.value?.save?.()
-  flowStore.persist()
 
-  toast.show('Changes saved')
+  saving.value = true
+  try {
+    await flowStore.persist()
+    toast.show('Changes saved')
+  } catch {
+    // Failure toast is already shown by the store's pendingSave chain.
+  } finally {
+    saving.value = false
+  }
 }
 
 function handleDeleted() {
@@ -81,7 +90,9 @@ function handleDeleted() {
       <AddCommentFields v-else-if="node.type === 'addComment'" ref="typeFieldsRef" :node="node" />
     </slot>
 
-    <Button class="self-start" @click="saveChanges">Save changes</Button>
+    <Button class="self-start" :disabled="saving" @click="saveChanges">
+      {{ saving ? 'Saving…' : 'Save changes' }}
+    </Button>
 
     <SheetFooter v-if="showFooter" class="border-t border-gray-200 px-0">
       <DeleteNodeButton :node-id="node.id" @deleted="handleDeleted" />
