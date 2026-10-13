@@ -3,7 +3,7 @@ import type { NodeDragEvent, NodeMouseEvent } from '@vue-flow/core'
 import { VueFlow } from '@vue-flow/core'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useCreateNodeModal } from '@/composables/useCreateNodeModal'
 import { useNodeDrawer } from '@/composables/useNodeDrawer'
 import { useFlowStore } from '@/stores/useFlowStore'
@@ -320,6 +320,50 @@ describe('CanvasView', () => {
     await vi.waitFor(() => expect(getTransform(wrapper)).not.toBe(before))
     vi.restoreAllMocks()
     wrapper.unmount()
+  })
+
+  describe('on a narrow viewport', () => {
+    const initialWidth = window.innerWidth
+
+    beforeEach(() => {
+      window.innerWidth = 375
+      window.dispatchEvent(new Event('resize'))
+    })
+
+    afterEach(() => {
+      window.innerWidth = initialWidth
+      window.dispatchEvent(new Event('resize'))
+    })
+
+    it('makes the canvas inert and focuses the full-screen drawer when a node is clicked', async () => {
+      const wrapper = await mountWithRenderedNodes()
+      const sendMessageNode = mockFlowNodes.find((node) => node.type === 'sendMessage')!
+      const canvas = wrapper.find('[inert]')
+      expect(canvas.exists()).toBe(false)
+
+      findNodeElement(wrapper, sendMessageNode.id).element.click()
+      await flushPromises()
+
+      expect(wrapper.find('.vue-flow').element.closest('[inert]')).not.toBeNull()
+      expect(wrapper.find('aside').attributes()).toMatchObject({ role: 'dialog', 'aria-modal': 'true' })
+      expect(document.activeElement?.tagName).toBe('H2')
+      wrapper.unmount()
+    })
+
+    it('restores the canvas and returns focus to the node when the drawer closes', async () => {
+      const wrapper = await mountWithRenderedNodes()
+      const sendMessageNode = mockFlowNodes.find((node) => node.type === 'sendMessage')!
+      const nodeElement = findNodeElement(wrapper, sendMessageNode.id).element
+
+      nodeElement.click()
+      await flushPromises()
+      await wrapper.find('aside').trigger('keydown', { key: 'Escape' })
+      await flushPromises()
+
+      expect(wrapper.find('.vue-flow').element.closest('[inert]')).toBeNull()
+      expect(document.activeElement).toBe(nodeElement)
+      wrapper.unmount()
+    })
   })
 
   it('disables Vue Flow\'s Backspace delete so nodes are only removed through the store', () => {

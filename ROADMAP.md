@@ -171,7 +171,7 @@ type FlowNode =
   - [x] Edge "+" quick-add buttons (`FlowAddEdge.vue`) are real `<button>`s with descriptive `aria-label`s ("Add node after …" / "Insert node between … and …"); edges themselves are no longer tab stops
   - [x] Focusing an off-screen node or "+" button pans the viewport to it (`setCenter` at the current zoom)
 - [x] Undo/redo actions on node details or positions updates — snapshot history (`useManualRefHistory`) committed on every `persist()`; nodes are now draggable with positions stored on each node, plus an Auto-align toolbar action
-- [ ] Responsive check for drawer on smaller viewports
+- [x] Responsive check for drawer on smaller viewports — below 768px the drawer is a full-screen overlay (no resize handle, canvas left as is); above that its width is capped so the canvas keeps at least 320px, with the user's preferred width restored once the window grows again
 - [x] Full lint + typecheck + test pass (`pnpm lint`, `pnpm typecheck`, `pnpm test`)
 - [x] Final Vercel deploy & smoke test of golden path (create → view → edit → delete)
 

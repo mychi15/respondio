@@ -37,8 +37,15 @@ const canvasContainer = useTemplateRef<HTMLElement>('canvasContainer')
 const canvasNodes = computed(() => [...flowStore.vueFlowNodes, ...flowStore.addNodePlaceholders.nodes])
 const canvasEdges = computed(() => [...flowStore.vueFlowEdges, ...flowStore.addNodePlaceholders.edges])
 
-// The node a keyboard open came from, so closing the drawer can hand focus back.
-let keyboardOpener: HTMLElement | null = null
+// The node the drawer was opened from with focus moved into the drawer
+// (keyboard opens, or any open in full-screen mode), so closing the drawer
+// can hand focus back.
+let focusOpener: HTMLElement | null = null
+
+// The full-screen drawer is modal: the canvas behind it is made inert so
+// Tab and screen readers can't reach it. Bound as `|| undefined` in the
+// template: Vue would render `inert="false"`, which browsers treat as inert.
+const isCanvasInert = computed(() => nodeDrawer.isOpen.value && nodeDrawer.isOverlay.value)
 
 function openNodeDrawer(data: FlowNode | undefined, options: { focus?: boolean } = {}): boolean {
   if (!data || !isInteractiveNodeType(data.type)) return false
@@ -58,16 +65,20 @@ function panToPendingTarget() {
 }
 
 function handleNodeClick({ node, event }: NodeMouseEvent) {
-  keyboardOpener = null
+  focusOpener = null
   const wasOpen = nodeDrawer.isOpen.value
-  if (!openNodeDrawer(node.data as FlowNode | undefined)) return
-  pendingPanTarget = event.target instanceof Element ? event.target.closest<HTMLElement>('.vue-flow__node') : null
+  // Full-screen, the clicked node goes inert, so focus has to move into the drawer.
+  const focus = nodeDrawer.isOverlay.value
+  if (!openNodeDrawer(node.data as FlowNode | undefined, { focus })) return
+  const nodeElement = event.target instanceof Element ? event.target.closest<HTMLElement>('.vue-flow__node') : null
+  if (focus) focusOpener = nodeElement
+  pendingPanTarget = nodeElement
   // Switching nodes in an already-open drawer changes no layout, so pan now.
   if (wasOpen) panToPendingTarget()
 }
 
 function handlePaneClick() {
-  keyboardOpener = null
+  focusOpener = null
   nodeDrawer.close()
 }
 
@@ -101,7 +112,7 @@ function handleCanvasKeydown(event: KeyboardEvent) {
   if (event.key === 'Enter' || event.key === ' ') {
     event.preventDefault()
     const node = nodeElement.dataset.id ? findNode(nodeElement.dataset.id) : undefined
-    if (openNodeDrawer(node?.data as FlowNode | undefined, { focus: true })) keyboardOpener = nodeElement
+    if (openNodeDrawer(node?.data as FlowNode | undefined, { focus: true })) focusOpener = nodeElement
   } else if (event.key === 'Escape') {
     nodeDrawer.close()
   }
@@ -200,9 +211,14 @@ watch(
 let fitViewTimeout: ReturnType<typeof setTimeout> | undefined
 
 watch(
-  [() => nodeDrawer.isOpen.value, () => nodeDrawer.width.value],
+  [() => nodeDrawer.isOpen.value, () => nodeDrawer.displayWidth.value, () => nodeDrawer.isOverlay.value],
   () => {
     clearTimeout(fitViewTimeout)
+    // A full-screen drawer covers the canvas without resizing it.
+    if (nodeDrawer.isOverlay.value) {
+      pendingPanTarget = null
+      return
+    }
     fitViewTimeout = setTimeout(async () => {
       await nextTick()
       await fitView({ duration: 200 })
@@ -216,8 +232,8 @@ watch(
   (nodeId) => {
     if (nodeId === null) {
       removeSelectedElements()
-      const opener = keyboardOpener
-      keyboardOpener = null
+      const opener = focusOpener
+      focusOpener = null
       if (opener) nextTick(() => opener.isConnected && opener.focus())
       return
     }
@@ -234,10 +250,11 @@ watch(
   <div
     class="grid h-screen w-screen"
     :class="!nodeDrawer.isResizing.value && 'transition-[grid-template-columns] duration-200 ease-out'"
-    :style="{ gridTemplateColumns: `1fr ${nodeDrawer.isOpen.value ? nodeDrawer.width.value : 0}px` }"
+    :style="{ gridTemplateColumns: `1fr ${nodeDrawer.isOpen.value && !nodeDrawer.isOverlay.value ? nodeDrawer.displayWidth.value : 0}px` }"
   >
     <div
       ref="canvasContainer"
+      :inert="isCanvasInert || undefined"
       class="relative h-full min-w-0 overflow-hidden"
       @keydown="handleCanvasKeydown"
       @keyup="handleCanvasKeyup"

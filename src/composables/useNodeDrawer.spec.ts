@@ -1,10 +1,29 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import { DRAWER_DEFAULT_WIDTH, DRAWER_MAX_WIDTH, DRAWER_MIN_WIDTH, useNodeDrawer } from './useNodeDrawer'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import {
+  CANVAS_MIN_WIDTH,
+  DRAWER_DEFAULT_WIDTH,
+  DRAWER_MAX_WIDTH,
+  DRAWER_MIN_WIDTH,
+  DRAWER_OVERLAY_BREAKPOINT,
+  useNodeDrawer,
+} from './useNodeDrawer'
+
+const initialViewportWidth = window.innerWidth
+
+function setViewportWidth(width: number) {
+  window.innerWidth = width
+  window.dispatchEvent(new Event('resize'))
+}
 
 describe('useNodeDrawer', () => {
   beforeEach(() => {
+    setViewportWidth(1920)
     useNodeDrawer().close()
     useNodeDrawer().setWidth(DRAWER_DEFAULT_WIDTH)
+  })
+
+  afterEach(() => {
+    setViewportWidth(initialViewportWidth)
   })
 
   it('starts closed with no selected node', () => {
@@ -81,5 +100,33 @@ describe('useNodeDrawer', () => {
     const { width, setWidth } = useNodeDrawer()
     setWidth(DRAWER_MAX_WIDTH + 100)
     expect(width.value).toBe(DRAWER_MAX_WIDTH)
+  })
+
+  it('caps the width so the canvas keeps its minimum width on a medium viewport', () => {
+    const { width, setWidth } = useNodeDrawer()
+    setViewportWidth(900)
+    setWidth(DRAWER_MAX_WIDTH)
+
+    expect(width.value).toBe(900 - CANVAS_MIN_WIDTH)
+  })
+
+  it('shows a capped width when the viewport shrinks but restores the preference once it grows', () => {
+    const { width, displayWidth, setWidth } = useNodeDrawer()
+    setWidth(DRAWER_MAX_WIDTH)
+
+    setViewportWidth(900)
+    expect(displayWidth.value).toBe(900 - CANVAS_MIN_WIDTH)
+    expect(width.value).toBe(DRAWER_MAX_WIDTH)
+
+    setViewportWidth(1920)
+    expect(displayWidth.value).toBe(DRAWER_MAX_WIDTH)
+  })
+
+  it('switches to the full-screen overlay below the breakpoint', () => {
+    const { isOverlay } = useNodeDrawer()
+    expect(isOverlay.value).toBe(false)
+
+    setViewportWidth(DRAWER_OVERLAY_BREAKPOINT - 1)
+    expect(isOverlay.value).toBe(true)
   })
 })

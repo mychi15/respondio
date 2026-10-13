@@ -53,7 +53,7 @@ function stopResize() {
 
 function startResize(event: MouseEvent) {
   drawer.setResizing(true)
-  activeMouseMove = handleMouseMove(event.clientX, drawer.width.value)
+  activeMouseMove = handleMouseMove(event.clientX, drawer.displayWidth.value)
   activeMouseUp = stopResize
 
   window.addEventListener('mousemove', activeMouseMove)
@@ -68,11 +68,15 @@ onUnmounted(() => {
 <template>
   <aside
     v-if="drawer.selectedNodeId.value !== null"
-    class="relative flex h-full min-w-0 flex-col overflow-y-auto border-l border-gray-200 bg-white"
+    class="flex h-full min-w-0 flex-col overflow-y-auto bg-white"
+    :class="drawer.isOverlay.value ? 'fixed inset-0 z-40 w-full' : 'relative border-l border-gray-200'"
+    :role="drawer.isOverlay.value ? 'dialog' : undefined"
+    :aria-modal="drawer.isOverlay.value ? 'true' : undefined"
     :aria-labelledby="titleId"
     @keydown.esc="handleEscape"
   >
     <div
+      v-if="!drawer.isOverlay.value"
       class="absolute inset-y-0 left-0 z-10 w-2 -translate-x-1/2 cursor-col-resize touch-none select-none hover:bg-blue-400/30"
       :class="drawer.isResizing.value && 'bg-blue-400/40'"
       @mousedown.prevent="startResize"

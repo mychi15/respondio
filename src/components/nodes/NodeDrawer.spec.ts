@@ -70,6 +70,21 @@ describe('NodeDrawer', () => {
     wrapper.unmount()
   })
 
+  it('covers the screen without a resize handle on a narrow viewport', async () => {
+    const initialWidth = window.innerWidth
+    window.innerWidth = 375
+    window.dispatchEvent(new Event('resize'))
+    useNodeDrawer().open(2)
+    const wrapper = mountDrawer()
+
+    expect(wrapper.find('aside').classes()).toEqual(expect.arrayContaining(['fixed', 'inset-0']))
+    expect(wrapper.find('.cursor-col-resize').exists()).toBe(false)
+
+    window.innerWidth = initialWidth
+    window.dispatchEvent(new Event('resize'))
+    wrapper.unmount()
+  })
+
   it('closes the drawer when the close button is clicked', async () => {
     useNodeDrawer().open(2)
     const wrapper = mountDrawer()
