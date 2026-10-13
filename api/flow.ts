@@ -1,5 +1,5 @@
 import { put } from '@vercel/blob'
-import mockFlow from './_fixtures/mockFlow.json'
+import mockFlow from './_fixtures/mockFlow.json' with { type: 'json' };
 
 export const config = { runtime: 'edge' }
 
