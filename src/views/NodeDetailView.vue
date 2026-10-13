@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import NodeDetailsPanel from '@/components/nodes/NodeDetailsPanel.vue'
-import ToastNotification from '@/components/ToastNotification.vue'
+import { ToastNotification } from '@/components/ui/toast'
 import { Button } from '@/components/ui/button'
 import { Loader2 } from '@lucide/vue'
 import { useFlowQuery } from '@/composables/useFlowQuery'
