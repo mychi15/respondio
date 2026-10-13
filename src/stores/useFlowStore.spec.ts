@@ -414,3 +414,51 @@ describe('useFlowStore saving through the Query mutation', () => {
     expect(queryClient.getQueryData<typeof mockFlowNodes>(FLOW_QUERY_KEY)?.find((node) => node.id === mockFlowNodes[1].id)?.name).toBe('Kept')
   })
 })
+
+describe('useFlowStore with the sample flow loaded', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.mocked(saveFlow).mockClear()
+  })
+
+  it('marks the flow as sample data and starts with an empty history', () => {
+    const store = useFlowStore()
+    store.loadSampleFlow(mockFlowNodes)
+
+    expect(store.isSampleData).toBe(true)
+    expect(store.nodes).toHaveLength(mockFlowNodes.length)
+    expect(store.canUndo).toBe(false)
+  })
+
+  it('keeps edits and undo working but sends nothing to the server', async () => {
+    const store = useFlowStore()
+    store.loadSampleFlow(mockFlowNodes)
+    store.updateNode(mockFlowNodes[1].id, { name: 'Offline edit' })
+
+    await store.persist()
+    store.deleteNode(mockFlowNodes[1].id)
+    store.undo()
+
+    expect(saveFlow).not.toHaveBeenCalled()
+    expect(store.nodes.find((node) => node.id === mockFlowNodes[1].id)?.name).toBe('Offline edit')
+  })
+
+  it('does not change the bundled sample flow when it is edited', () => {
+    const store = useFlowStore()
+    const originalName = mockFlowNodes[1].name
+    store.loadSampleFlow(mockFlowNodes)
+
+    store.updateNode(mockFlowNodes[1].id, { name: 'Offline edit' })
+
+    expect(mockFlowNodes[1].name).toBe(originalName)
+  })
+
+  it('leaves sample mode when a real flow is loaded', () => {
+    const store = useFlowStore()
+    store.loadSampleFlow(mockFlowNodes)
+
+    store.setNodes(mockFlowNodes)
+
+    expect(store.isSampleData).toBe(false)
+  })
+})

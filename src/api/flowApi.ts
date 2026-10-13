@@ -5,12 +5,14 @@ export const API_BASE_URL =
 
 const FLOW_KEY = import.meta.env.VITE_FLOW_KEY ?? 'flows/flow.json'
 
+const FETCH_TIMEOUT_MS = 10_000
+
 function flowUrl(): string {
   return `${API_BASE_URL}/api/flow?key=${encodeURIComponent(FLOW_KEY)}`
 }
 
 export async function fetchFlow(): Promise<FlowNode[]> {
-  const res = await fetch(flowUrl())
+  const res = await fetch(flowUrl(), { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
   if (!res.ok) throw new Error(`Failed to load flow (${res.status})`)
   return res.json()
 }

@@ -3,7 +3,7 @@ import { watch } from 'vue'
 import { fetchFlow } from '@/api/flowApi'
 import { useFlowStore } from '@/stores/useFlowStore'
 import { FLOW_QUERY_KEY } from '@/lib/queryClient'
-import { useToast } from '@/composables/useToast'
+import mockFlow from '../../api/_fixtures/mockFlow'
 
 /**
  * Fetches the flow and syncs it into the store. CanvasView renders both `/`
@@ -12,11 +12,11 @@ import { useToast } from '@/composables/useToast'
  */
 export function useFlowQuery() {
   const flowStore = useFlowStore()
-  const toast = useToast()
 
   const query = useQuery({
     queryKey: FLOW_QUERY_KEY,
     queryFn: fetchFlow,
+    retry: 1,
   })
 
   // Seeds the store from the first successful load only. After that the
@@ -32,7 +32,7 @@ export function useFlowQuery() {
   )
 
   watch(query.isError, (hasError) => {
-    if (hasError) toast.show('Failed to load the flow. Please refresh.')
+    if (hasError) flowStore.loadSampleFlow(mockFlow)
   })
 
   return query

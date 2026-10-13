@@ -9,6 +9,7 @@ import { useNodeDrawer } from '@/composables/useNodeDrawer'
 import { useToast } from '@/composables/useToast'
 import { router } from '@/router'
 import { useFlowStore } from '@/stores/useFlowStore'
+import { fetchFlow } from '@/api/flowApi'
 import { getNodeHeight, getNodeWidth } from '@/utils/flowLayout'
 import CanvasView from './CanvasView.vue'
 import mockFlowNodes from '../../api/_fixtures/mockFlow'
@@ -408,6 +409,15 @@ describe('CanvasView', () => {
       expect(document.activeElement).toBe(nodeElement)
       wrapper.unmount()
     })
+  })
+
+  it('shows a sample-data banner when the flow cannot be loaded from the API', async () => {
+    vi.mocked(fetchFlow).mockRejectedValueOnce(new Error('Failed to load flow (503)')).mockRejectedValueOnce(new Error('Failed to load flow (503)'))
+    const wrapper = mount(CanvasView, mountOptions)
+    expect(wrapper.find('[role="status"]').exists()).toBe(false)
+
+    await vi.waitFor(() => expect(wrapper.find('[role="status"]').text()).toContain('sample data'), { timeout: 3000 })
+    expect(wrapper.findComponent(VueFlow).props('nodes')).not.toHaveLength(0)
   })
 
   it('disables Vue Flow\'s Backspace delete so nodes are only removed through the store', () => {

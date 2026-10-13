@@ -32,7 +32,7 @@ const edgeTypes = { customEdge: markRaw(FlowAddEdge) }
 
 const { fitView, findNode, getEdges, getSelectedNodes, addSelectedElements, removeSelectedElements, viewport, setCenter } = useVueFlow()
 
-const { isLoading, isError } = useFlowQuery()
+const { isLoading } = useFlowQuery()
 const toast = useToast()
 
 const canvasContainer = useTemplateRef<HTMLElement>('canvasContainer')
@@ -213,12 +213,12 @@ watch(
 
 // A /node/:nodeId link can point at a node that doesn't exist (a stale or
 // mistyped link) or one with no drawer (trigger, connector). Checked once the
-// flow has loaded; 'post' so it runs after useFlowQuery has synced the store.
-// On a failed load the drawer stays open, so a refresh retries the same link.
+// flow has loaded (or fallen back to the sample flow); 'post' so it runs
+// after useFlowQuery has synced the store.
 watch(
   [() => nodeDrawer.selectedNodeId.value, isLoading],
   ([nodeId, loading]) => {
-    if (nodeId === null || loading || isError.value) return
+    if (nodeId === null || loading) return
     const node = flowStore.nodes.find((candidate) => String(candidate.id) === String(nodeId))
     if (node && isInteractiveNodeType(node.type)) return
     toast.show(node ? `${FLOW_NODE_TYPE_LABELS[node.type]} nodes have no details to edit.` : 'That node no longer exists.')
@@ -302,6 +302,12 @@ watch(
         <div class="flex flex-1 justify-center">
           <ToastNotification />
         </div>
+      </div>
+      <!-- Under the toolbar row: the bottom of the canvas is taken by Vue Flow's controls. -->
+      <div v-if="flowStore.isSampleData" class="pointer-events-none absolute inset-x-4 top-16 z-10 flex justify-center">
+        <p role="status" class="pointer-events-auto max-w-md rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-center text-xs text-amber-900 shadow-sm">
+          Couldn't reach the server, so this is sample data. Changes won't be saved.
+        </p>
       </div>
       <CreateNodeModal />
     </div>

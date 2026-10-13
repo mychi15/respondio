@@ -1,8 +1,9 @@
 import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defineComponent } from 'vue'
+import { fetchFlow } from '@/api/flowApi'
 import { FLOW_QUERY_KEY } from '@/lib/queryClient'
 import { useFlowStore } from '@/stores/useFlowStore'
 import { useFlowQuery } from './useFlowQuery'
@@ -19,6 +20,7 @@ function mountWithQuery() {
 describe('useFlowQuery', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    vi.mocked(fetchFlow).mockClear()
   })
 
   it('seeds the store from the fetched flow', async () => {
@@ -26,6 +28,26 @@ describe('useFlowQuery', () => {
     await flushPromises()
 
     expect(useFlowStore().nodes.map((node) => node.id)).toEqual(mockFlowNodes.map((node) => node.id))
+    expect(useFlowStore().isSampleData).toBe(false)
+  })
+
+  it('falls back to the sample flow when the API cannot be reached, after one retry', async () => {
+    vi.mocked(fetchFlow).mockRejectedValueOnce(new Error('Failed to load flow (503)')).mockRejectedValueOnce(new Error('Failed to load flow (503)'))
+    mountWithQuery()
+
+    await vi.waitFor(() => expect(useFlowStore().isSampleData).toBe(true), { timeout: 3000 })
+
+    expect(fetchFlow).toHaveBeenCalledTimes(2)
+    expect(useFlowStore().nodes.map((node) => node.id)).toEqual(mockFlowNodes.map((node) => node.id))
+  })
+
+  it('does not fall back when the retry succeeds', async () => {
+    vi.mocked(fetchFlow).mockRejectedValueOnce(new Error('Failed to load flow (503)'))
+    mountWithQuery()
+
+    await vi.waitFor(() => expect(useFlowStore().nodes).toHaveLength(mockFlowNodes.length), { timeout: 3000 })
+
+    expect(useFlowStore().isSampleData).toBe(false)
   })
 
   it('does not overwrite the store or its undo history when the cache changes after the first load', async () => {

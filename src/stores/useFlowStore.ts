@@ -47,6 +47,8 @@ function createDataForType(type: CreatableNodeType): FlowNode['data'] {
 export const useFlowStore = defineStore('flow', () => {
   const nodes = ref<FlowNode[]>([])
 
+  const isSampleData = ref(false)
+
   // Positions are stored on each node; auto-layout only fills the gaps for
   // nodes that were never given one (e.g. state set directly in tests).
   const nodePositions = computed(() => {
@@ -83,6 +85,7 @@ export const useFlowStore = defineStore('flow', () => {
   )
 
   function save(): Promise<void> {
+    if (isSampleData.value) return Promise.resolve()
     // Snapshot now: queued saves wait their turn, and each must send the flow
     // as it was when it was made, not whatever it is by the time it runs.
     const snapshot: FlowNode[] = JSON.parse(JSON.stringify(nodes.value))
@@ -118,9 +121,15 @@ export const useFlowStore = defineStore('flow', () => {
     const cloned = structuredClone(toRaw(next))
     fillMissingPositions(cloned)
     nodes.value = cloned
+    isSampleData.value = false
     // The loaded flow becomes the history baseline.
     history.commit()
     history.clear()
+  }
+
+  function loadSampleFlow(sample: FlowNode[]): void {
+    setNodes(sample)
+    isSampleData.value = true
   }
 
   function createNode(input: CreateNodeInput, attachment: CreateNodeAttachment): FlowNode {
@@ -251,10 +260,12 @@ export const useFlowStore = defineStore('flow', () => {
 
   return {
     nodes,
+    isSampleData,
     vueFlowNodes,
     vueFlowEdges,
     addNodePlaceholders,
     setNodes,
+    loadSampleFlow,
     createNode,
     updateNode,
     updateBusinessHours,

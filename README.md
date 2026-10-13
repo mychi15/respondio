@@ -12,7 +12,7 @@ Requires [pnpm](https://pnpm.io/).
 pnpm install
 ```
 
-No `.env.local` needed. In local dev the app calls the deployed API.
+No `.env.local` needed. In local dev the app calls the deployed API. If that API can't be reached, the app still runs: it loads the bundled sample flow and shows a banner saying changes won't be saved.
 
 To run the API locally instead, set `VITE_API_BASE_URL` in `.env.local` and provide Redis (`KV_REST_API_URL`/`KV_REST_API_TOKEN`) and Blob (`BLOB_READ_WRITE_TOKEN`) credentials — see [Running the project](#running-the-project).
 
@@ -65,6 +65,9 @@ To run the API locally instead, set `VITE_API_BASE_URL` in `.env.local` and prov
 
 12. **The URL is the source of truth for the open drawer.** 
     `useNodeDrawer` has no `selectedNodeId` state of its own; it derives it from `route.params.nodeId`, and opening/closing the drawer is just navigation. Keeping one copy of the state means the URL and the drawer can't drift apart, and refresh, sharing a link and Back/Forward all work without extra code. `/` and `/node/:nodeId` render the same `CanvasView`, so switching between them keeps the canvas mounted (no re-fetch, no lost pan/zoom).
+
+13. **Fall back to the sample flow when the API is unreachable.** 
+    If loading the flow fails (after one retry, or a 10s timeout), the store loads the bundled [mockFlow](api/_fixtures/mockFlow.ts), the same payload the API seeds new flows from, instead of leaving an error screen. The app is fully usable in that mode, including undo, but saves are skipped rather than attempted: a banner says changes won't be saved, so there's no failed-save toast on every edit. This keeps the app reviewable even if the deployed API, Redis or the network is down. Attachment uploads still need the API.
 
 ## Project structure
 

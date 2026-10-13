@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { FlowNode } from '@/types/flow'
 import { useFlowStore } from '@/stores/useFlowStore'
+import { useToast } from '@/composables/useToast'
 import { uploadAttachment } from '@/api/uploadApi'
 import NodeDetailsPanel from './NodeDetailsPanel.vue'
 
@@ -163,6 +164,17 @@ describe('NodeDetailsPanel', () => {
     await wrapper.findAll('input[type="time"]')[0].setValue('18:00')
 
     expect(saveButton().attributes('disabled')).toBeDefined()
+  })
+
+  it('says changes are not saved when editing the sample flow', async () => {
+    const store = useFlowStore()
+    store.loadSampleFlow([triggerNode, sendMessageNode])
+    const wrapper = mountPanel(2)
+
+    await wrapper.findAll('button').find((button) => button.text() === 'Save changes')!.trigger('click')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(useToast().message.value).toBe('Changes applied (sample data, not saved)')
   })
 
   it('does not render any actions for non-editable nodes', () => {
