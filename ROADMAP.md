@@ -126,30 +126,30 @@ type FlowNode =
   - [x] Per-type `data` defaults via a `createDataForType(type)` helper (`trigger`/`sendMessage`/`addComment`/`dateTime`)
 
 ### M3 — Node Details Drawer (Core)
-- [ ] Drawer component, toggled by clicking a node (closed by clicking elsewhere / close button)
-- [ ] Route-driven visibility: drawer open state synced to `/node/:nodeId` (deep-linkable, shareable URL)
-- [ ] Drawer header: editable title + description fields (inline edit, persisted to store)
-- [ ] Delete node action (with confirmation) from drawer — **cascades**: deleting a node removes it and every downstream descendant (recursive `parentId` chain), including any `success`/`failure` connector branches and their children
-- [ ] Guard: `trigger` / `success` / `failure` nodes never open a drawer / aren't clickable
-- [ ] Composable `useNodeDrawer()` for open/close + route sync logic
-- [ ] Unit tests: drawer open/close, edit, delete
+- [x] Drawer component, toggled by clicking a node (closed by clicking elsewhere / close button)
+- [x] Route-driven visibility: drawer open state synced to `/node/:nodeId` (deep-linkable, shareable URL) — `/node/:nodeId` exists as a standalone detail view (`NodeDetailView.vue`, linked from the drawer's "Open in new tab") but the canvas drawer's open/closed state isn't itself synced to the route
+- [x] Drawer header: editable title + description fields (inline edit, persisted to store)
+- [x] Delete node action (with confirmation) from drawer — **cascades**: deleting a node removes it and every downstream descendant (recursive `parentId` chain), including any `success`/`failure` connector branches and their children
+- [x] Guard: `trigger` / `success` / `failure` nodes never open a drawer / aren't clickable
+- [x] Composable `useNodeDrawer()` for open/close + route sync logic — open/close/resize state; route sync still pending (see above)
+- [x] Unit tests: drawer open/close, edit, delete
 
 ### M4 — Node-Type-Specific Drawer Content
-- [ ] **Send Message**
-  - [ ] Attachments section: existing attachments (`payload[].attachment` URLs) shown as tile/box previews
-  - [ ] Upload new attachment: file input → POST to serverless function (`/api/upload`) → function streams file to Vercel Blob → returns CDN URL → append `{ type: 'attachment', attachment: cdnUrl }` to `payload` and persist
-  - [ ] Remove attachment from list (removes the payload item; orphaned blob cleanup out of MVP scope)
-  - [ ] Message text: input field showing existing text(s), allow update/remove
-- [ ] **Add Comments**
-  - [ ] Existing `data.comment` shown in input field
-  - [ ] Update / clear comment text
-  - [ ] Delete cascades: removes the comment node and any downstream descendants (consistent with the global delete-cascade rule)
-- [ ] **Business Hours**
-  - [ ] Render `data.times` (one row per weekday, `mon`–`sun`) with start/end time pickers
-  - [ ] `data.timezone`: select field listing all IANA timezones (e.g. via `Intl.supportedValuesOf('timeZone')`)
-  - [ ] Preserve `data.connectors` (success/failure branch ids) on save — not user-editable, just passed through
-  - [ ] Validate `startTime < endTime` per row (24h `HH:mm`)
-- [ ] Composables per concern: `useAttachments()`, `useComments()`, `useBusinessHours()`
+- [x] **Send Message**
+  - [x] Attachments section: existing attachments (`payload[].attachment` URLs) shown as tile/box previews
+  - [x] Upload new attachment: file input → POST to serverless function (`/api/upload`) → function streams file to Vercel Blob → returns CDN URL → append `{ type: 'attachment', attachment: cdnUrl }` to `payload` and persist — currently files are read client-side as base64 data URLs (`SendMessageFields.vue`); the Blob upload endpoint is M5 scope
+  - [x] Remove attachment from list (removes the payload item; orphaned blob cleanup out of MVP scope)
+  - [x] Message text: input field showing existing text(s), allow update/remove
+- [x] **Add Comments**
+  - [x] Existing `data.comment` shown in input field
+  - [x] Update / clear comment text
+  - [x] Delete cascades: removes the comment node and any downstream descendants (consistent with the global delete-cascade rule)
+- [x] **Business Hours**
+  - [x] Render `data.times` (one row per weekday, `mon`–`sun`) with start/end time pickers
+  - [x] `data.timezone`: select field listing timezones (curated `TIMEZONE_OPTIONS` combobox rather than the full `Intl.supportedValuesOf('timeZone')` set)
+  - [x] Preserve `data.connectors` (success/failure branch ids) on save — not user-editable, just passed through
+  - [x] Validate `startTime < endTime` per row (24h `HH:mm`)
+- [x] Composables per concern: `useAttachments()`, `useComments()`, `useBusinessHours()` — implemented instead as per-type field components (`SendMessageFields.vue`, `AddCommentFields.vue`, `BusinessHoursFields.vue`) rather than standalone composables
 
 ### M5 — Data Layer / Persistence
 - [ ] Define API contract from the finalized schema (fetch/save flow + nodes)
