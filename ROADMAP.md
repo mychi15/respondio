@@ -166,7 +166,7 @@ type FlowNode =
 - [ ] Canvas UX: pan/zoom defaults, minimap/controls (Vue Flow built-ins) as needed
 - [ ] Accessibility pass on drawer (focus trap, `useId()` for form fields, keyboard close)
 - [ ] Empty states (no nodes yet, no attachments, no comments, no `description` on a node)
-- [ ] CI/CD pipeline for running tests
+- [x] CI/CD pipeline for running tests — GitHub Actions (`.github/workflows/ci.yml`): lint, typecheck, unit tests, build, then serialized Playwright e2e against the deployed API; deploys stay on Vercel Git integration
 - [ ] Keyboard accessibility for selecting nodes and opening details drawer
 - [x] Undo/redo actions on node details or positions updates — snapshot history (`useManualRefHistory`) committed on every `persist()`; nodes are now draggable with positions stored on each node, plus an Auto-align toolbar action
 - [ ] Responsive check for drawer on smaller viewports

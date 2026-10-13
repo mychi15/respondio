@@ -102,3 +102,12 @@ Before finalizing any change, run all three gates:
 ```bash
 pnpm lint && pnpm typecheck && pnpm test
 ```
+
+## CI
+
+[.github/workflows/ci.yml](.github/workflows/ci.yml) runs on every pull request and push to `master`:
+
+- **`checks`** — `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`
+- **`e2e`** — `pnpm test:e2e` (after `checks` passes), with `VITE_API_BASE_URL` pointed at the deployed instance. Runs are serialized across branches because they all reset and mutate the same shared test flow key. On failure, the Playwright report and traces are uploaded as a `playwright-report` artifact.
+
+Deploys are handled separately by Vercel's Git integration. CI doesn't verify `api/` function behaviour — e2e exercises the frontend against the already-deployed API.

@@ -9,7 +9,11 @@ const PORT = 5190
 export default defineConfig({
   testDir: './e2e',
   fullyParallel: true,
-  reporter: 'html',
+  forbidOnly: !!process.env.CI,
+  // Runs against live infra, so allow one retry in CI (also what makes
+  // `trace: 'on-first-retry'` actually capture a trace).
+  retries: process.env.CI ? 1 : 0,
+  reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'html',
   use: {
     baseURL: `http://localhost:${PORT}`,
     trace: 'on-first-retry',
