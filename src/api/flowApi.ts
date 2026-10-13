@@ -1,6 +1,6 @@
 import type { FlowNode } from '@/types/flow'
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? ''
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'https://respondio-eosin.vercel.app'
 
 const FLOW_KEY = import.meta.env.VITE_FLOW_KEY ?? 'flows/flow.json'
 

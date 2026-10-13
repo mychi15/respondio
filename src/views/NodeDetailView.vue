@@ -4,12 +4,13 @@ import { useRoute, useRouter } from 'vue-router'
 import NodeDetailsPanel from '@/components/nodes/NodeDetailsPanel.vue'
 import ToastNotification from '@/components/ToastNotification.vue'
 import { Button } from '@/components/ui/button'
+import { Loader2 } from '@lucide/vue'
 import { useFlowQuery } from '@/composables/useFlowQuery'
 
 const route = useRoute()
 const router = useRouter()
 
-useFlowQuery()
+const { isPending, isError } = useFlowQuery()
 
 const nodeId = computed(() => route.params.nodeId as string)
 
@@ -24,7 +25,11 @@ function handleDeleted() {
       <router-link to="/">View canvas</router-link>
     </Button>
 
-    <NodeDetailsPanel :node-id="nodeId" @deleted="handleDeleted" />
+    <div v-if="isPending" class="flex items-center justify-center py-12 text-gray-500">
+      <Loader2 class="size-5 animate-spin" />
+    </div>
+    <p v-else-if="isError" class="py-12 text-center text-gray-500">No node found</p>
+    <NodeDetailsPanel v-else :node-id="nodeId" @deleted="handleDeleted" />
   </div>
   <div class="pointer-events-none fixed inset-x-0 top-4 z-[100] flex justify-center">
     <ToastNotification />
