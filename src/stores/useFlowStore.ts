@@ -6,7 +6,7 @@ import { computeNodePositions } from '@/utils/flowLayout'
 import { generateNodeId } from '@/utils/helpers'
 import { saveFlow } from '@/api/flowApi'
 import { useToast } from '@/composables/useToast'
-import { sampleFlowNodes } from './sampleFlow'
+import mockFlowNodes from '../../api/_fixtures/mockFlow.json'
 
 export type CreateNodeAttachment =
   | { mode: 'root' }
@@ -33,9 +33,9 @@ function createDataForType(type: CreatableNodeType): FlowNode['data'] {
 }
 
 export const useFlowStore = defineStore('flow', () => {
-  // Cloned so pushes/mutations don't leak into the shared sampleFlowNodes
+  // Cloned so pushes/mutations don't leak into the shared mockFlowNodes
   // fixture (and therefore into other tests/store instances importing it).
-  const nodes = ref<FlowNode[]>(structuredClone(sampleFlowNodes))
+  const nodes = ref<FlowNode[]>(structuredClone(mockFlowNodes as FlowNode[]))
 
   const nodePositions = computed(() => computeNodePositions(nodes.value))
   const vueFlowNodes = computed(() => toVueFlowNodes(nodes.value, nodePositions.value))

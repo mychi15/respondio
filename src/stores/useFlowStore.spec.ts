@@ -1,7 +1,7 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { useFlowStore } from './useFlowStore'
-import { sampleFlowNodes } from './sampleFlow'
+import mockFlowNodes from '../../api/_fixtures/mockFlow.json'
 
 describe('useFlowStore', () => {
   beforeEach(() => {
@@ -10,12 +10,12 @@ describe('useFlowStore', () => {
 
   it('derives vueFlowNodes with the same length as the sample nodes', () => {
     const store = useFlowStore()
-    expect(store.vueFlowNodes).toHaveLength(sampleFlowNodes.length)
+    expect(store.vueFlowNodes).toHaveLength(mockFlowNodes.length)
   })
 
   it('derives vueFlowEdges with one fewer entry than nodes (root has no edge)', () => {
     const store = useFlowStore()
-    expect(store.vueFlowEdges).toHaveLength(sampleFlowNodes.length - 1)
+    expect(store.vueFlowEdges).toHaveLength(mockFlowNodes.length - 1)
   })
 
   it('marks the trigger node as unselectable', () => {

@@ -4,9 +4,12 @@ import { VueFlow } from '@vue-flow/core'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import { sampleFlowNodes } from '@/stores/sampleFlow'
+import type { FlowNode } from '@/types/flow'
 import { useNodeDrawer } from '@/composables/useNodeDrawer'
 import CanvasView from './CanvasView.vue'
+import mockFlowNodesJson from '../../api/_fixtures/mockFlow.json'
+
+const mockFlowNodes = mockFlowNodesJson as FlowNode[]
 
 const mountOptions = { global: { plugins: [VueQueryPlugin] } }
 
@@ -33,19 +36,19 @@ describe('CanvasView', () => {
   it('passes the store sample data plus add-node placeholders through to VueFlow as nodes and edges', () => {
     const wrapper = mount(CanvasView, mountOptions)
 
-    const leafCount = sampleFlowNodes.filter(
-      (node) => !sampleFlowNodes.some((candidate) => candidate.parentId === node.id),
+    const leafCount = mockFlowNodes.filter(
+      (node) => !mockFlowNodes.some((candidate) => candidate.parentId === node.id),
     ).length
 
     const vueFlow = wrapper.findComponent(VueFlow)
-    expect(vueFlow.props('nodes')).toHaveLength(sampleFlowNodes.length + leafCount)
-    expect(vueFlow.props('edges')).toHaveLength(sampleFlowNodes.length - 1 + leafCount)
+    expect(vueFlow.props('nodes')).toHaveLength(mockFlowNodes.length + leafCount)
+    expect(vueFlow.props('edges')).toHaveLength(mockFlowNodes.length - 1 + leafCount)
   })
 
   it('opens the node drawer when an interactive node is clicked', async () => {
     const wrapper = mount(CanvasView, mountOptions)
     const vueFlow = wrapper.findComponent(VueFlow)
-    const sendMessageNode = sampleFlowNodes.find((node) => node.type === 'sendMessage')!
+    const sendMessageNode = mockFlowNodes.find((node) => node.type === 'sendMessage')!
 
     emitNodeClick(vueFlow, sendMessageNode)
     await wrapper.vm.$nextTick()
@@ -57,7 +60,7 @@ describe('CanvasView', () => {
   it('does not open the node drawer when a non-interactive node is clicked', async () => {
     const wrapper = mount(CanvasView, mountOptions)
     const vueFlow = wrapper.findComponent(VueFlow)
-    const triggerNode = sampleFlowNodes.find((node) => node.type === 'trigger')!
+    const triggerNode = mockFlowNodes.find((node) => node.type === 'trigger')!
 
     emitNodeClick(vueFlow, triggerNode)
     await wrapper.vm.$nextTick()
