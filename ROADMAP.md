@@ -160,7 +160,7 @@ type FlowNode =
 - [x] Wire Vue Query mutations for create/update/delete node, attachments, comments, business hours — each mutation persists the full updated flow JSON back to Blob via `/api/flow` — implemented as the store synchronously mutating local state (as before) then firing a direct `saveFlow()` persist call, rather than full `useMutation` wrapping, per the simple/MVP strategy decided during planning
 - [x] Optimistic updates + cache invalidation strategy — simple strategy: store stays source of truth, mutates immediately, persists after; no rollback on failure (toast only) — accepted MVP tradeoff, not full `onMutate`/`onError` rollback
 - [x] Error/loading states surfaced in UI (including upload failure/progress) — canvas loading placeholder, toast on fetch/save/upload failure, per-attachment uploading spinner tile
-- [ ] Playwright E2E golden path driven against the Blob-hosted mock schema: load flow → create node → edit title/description → upload attachment → edit type-specific fields → delete (cascade) → verify canvas + drawer state + updated Blob JSON
+- [x] Playwright E2E golden path driven against the Blob-hosted mock schema: load flow → create node → edit title/description → upload attachment → edit type-specific fields → delete (cascade) → verify canvas + drawer state + updated Blob JSON
 
 ### M6 — Polish & Hardening
 - [ ] Canvas UX: pan/zoom defaults, minimap/controls (Vue Flow built-ins) as needed
