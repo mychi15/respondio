@@ -1,9 +1,17 @@
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { BusinessHoursNode } from '@/types/flow'
 import { useFlowStore } from '@/stores/useFlowStore'
 import BusinessHoursFields from './BusinessHoursFields.vue'
+
+// Pinned so the fallback test doesn't depend on the machine's zone — CI
+// runners report "UTC", which isn't in TIMEZONE_OPTIONS.
+const BROWSER_TIMEZONE = 'Asia/Kuala_Lumpur'
+vi.mock('@/utils/helpers', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/utils/helpers')>()),
+  getBrowserTimezone: () => BROWSER_TIMEZONE,
+}))
 
 const SelectStub = {
   props: ['modelValue'],
@@ -66,8 +74,7 @@ describe('BusinessHoursFields', () => {
     }
     const wrapper = mountFields(node)
 
-    const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
-    expect(wrapper.findAll('select')[0].element.value).toBe(browserTimezone)
+    expect(wrapper.findAll('select')[0].element.value).toBe(BROWSER_TIMEZONE)
   })
 
   it('shows a validation message when the start time is not before the end time', async () => {
