@@ -87,6 +87,41 @@ describe('BusinessHoursFields', () => {
     expect(wrapper.text()).toContain('Start time must be before end time')
   })
 
+  it('flags a duplicate row on the same day and reports the form as invalid', async () => {
+    const wrapper = mountFields(businessHoursNode)
+    expect(wrapper.vm.isValid).toBe(true)
+
+    await wrapper.findAll('button').find((button) => button.text() === 'Add time')!.trigger('click')
+    // The new row starts on an unused day; move it onto Monday with the same start time.
+    await wrapper.findAll('select')[2].setValue('mon')
+    const timeInputs = wrapper.findAll('input[type="time"]')
+    await timeInputs[2].setValue('09:00')
+    await timeInputs[3].setValue('12:00')
+
+    expect(wrapper.text()).toContain('Another row on this day already starts or ends at this time')
+    expect(timeInputs[2].attributes('aria-invalid')).toBe('true')
+    expect(wrapper.vm.isValid).toBe(false)
+  })
+
+  it('reports the form as invalid while a row has its start after its end', async () => {
+    const wrapper = mountFields(businessHoursNode)
+
+    const timeInputs = wrapper.findAll('input[type="time"]')
+    await timeInputs[0].setValue('18:00')
+    await timeInputs[1].setValue('09:00')
+
+    expect(wrapper.vm.isValid).toBe(false)
+  })
+
+  it('adds a new row on the first weekday that has no hours yet', async () => {
+    const wrapper = mountFields(businessHoursNode)
+
+    await wrapper.findAll('button').find((button) => button.text() === 'Add time')!.trigger('click')
+
+    expect(wrapper.findAll('select')[2].element.value).toBe('tue')
+    expect(wrapper.text()).not.toContain('Another row on this day')
+  })
+
   it('removes a time row when its remove button is clicked', async () => {
     const wrapper = mountFields(businessHoursNode)
 

@@ -128,6 +128,43 @@ describe('NodeDetailsPanel', () => {
     expect(saved?.type === 'sendMessage' && saved.data.payload).toContainEqual({ type: 'attachment', attachment: 'https://example.com/late.png' })
   })
 
+  it('shows an error and disables Save when the title is cleared', async () => {
+    const store = useFlowStore()
+    const wrapper = mountPanel(2)
+    const saveButton = () => wrapper.findAll('button').find((button) => button.text() === 'Save changes')!
+    const nameBefore = store.nodes.find((node) => node.id === 2)?.name
+
+    await wrapper.find('#node-details-name').setValue('   ')
+
+    expect(wrapper.text()).toContain('Title is required')
+    expect(wrapper.find('#node-details-name').attributes('aria-invalid')).toBe('true')
+    expect(saveButton().attributes('disabled')).toBeDefined()
+    await saveButton().trigger('click')
+    expect(store.nodes.find((node) => node.id === 2)?.name).toBe(nameBefore)
+
+    await wrapper.find('#node-details-name').setValue('Renamed')
+    expect(wrapper.text()).not.toContain('Title is required')
+    expect(saveButton().attributes('disabled')).toBeUndefined()
+  })
+
+  it('disables Save while the business hours are invalid', async () => {
+    const store = useFlowStore()
+    store.nodes.push({
+      id: 3,
+      parentId: 1,
+      type: 'dateTime',
+      name: 'Opening hours',
+      data: { times: [{ day: 'mon', startTime: '09:00', endTime: '17:00' }], connectors: [], timezone: 'UTC', action: 'businessHours' },
+    })
+    const wrapper = mountPanel(3)
+    const saveButton = () => wrapper.findAll('button').find((button) => button.text() === 'Save changes')!
+    expect(saveButton().attributes('disabled')).toBeUndefined()
+
+    await wrapper.findAll('input[type="time"]')[0].setValue('18:00')
+
+    expect(saveButton().attributes('disabled')).toBeDefined()
+  })
+
   it('does not render any actions for non-editable nodes', () => {
     const wrapper = mountPanel(1)
 

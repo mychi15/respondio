@@ -5,6 +5,7 @@ import { FLOW_NODE_TYPE_LABELS } from '@/types/flow'
 import { isInteractiveNodeType } from '@/utils/flowGraph'
 import { useFlowStore } from '@/stores/useFlowStore'
 import { useToast } from '@/composables/useToast'
+import { validateTitle } from '@/utils/nodeFormValidation'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -33,16 +34,21 @@ watch(
 )
 
 // Exposed refs come back unwrapped through a component ref, hence `boolean`.
-const typeFieldsRef = ref<{ save?: () => void; isUploading?: boolean } | null>(null)
+const typeFieldsRef = ref<{ save?: () => void; isUploading?: boolean; isValid?: boolean } | null>(null)
 
 const isUploading = computed(() => Boolean(typeFieldsRef.value?.isUploading))
+
+const titleError = computed(() => validateTitle(form.name))
+
+// Type fields that don't validate (comments, messages) don't expose isValid.
+const canSave = computed(() => !titleError.value && typeFieldsRef.value?.isValid !== false)
 
 const toast = useToast()
 
 const saving = ref(false)
 
 async function saveChanges() {
-  if (!node.value) return
+  if (!node.value || !canSave.value) return
   flowStore.updateNode(node.value.id, { name: form.name.trim(), description: form.description.trim() || undefined })
   typeFieldsRef.value?.save?.()
 
@@ -68,7 +74,14 @@ async function saveChanges() {
   <div v-else class="flex h-full min-w-0 flex-col gap-4">
     <div class="flex flex-col gap-1.5">
       <Label for="node-details-name">Title</Label>
-      <Input id="node-details-name" v-model="form.name" placeholder="Node title" />
+      <Input
+        id="node-details-name"
+        v-model="form.name"
+        placeholder="Node title"
+        :aria-invalid="Boolean(titleError) || undefined"
+        :aria-describedby="titleError ? 'node-details-name-error' : undefined"
+      />
+      <p v-if="titleError" id="node-details-name-error" class="text-xs text-red-500">{{ titleError }}</p>
     </div>
 
     <div class="flex flex-col gap-1.5">
@@ -86,7 +99,7 @@ async function saveChanges() {
       <AddCommentFields v-else-if="node.type === 'addComment'" ref="typeFieldsRef" :node="node" />
     </slot>
 
-    <Button class="self-start" :disabled="saving || isUploading" @click="saveChanges">
+    <Button class="self-start" :disabled="saving || isUploading || !canSave" @click="saveChanges">
       {{ saving ? 'Saving…' : isUploading ? 'Uploading…' : 'Save changes' }}
     </Button>
   </div>
