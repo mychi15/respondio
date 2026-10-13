@@ -8,6 +8,7 @@ import { useEventListener, usePreferredReducedMotion } from '@vueuse/core'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 import type { FlowNode } from '@/types/flow'
+import { FLOW_NODE_TYPE_LABELS } from '@/types/flow'
 import { isInteractiveNodeType } from '@/utils/flowGraph'
 import { getNodeHeight, getNodeWidth } from '@/utils/flowLayout'
 import FlowNodeRenderer from '@/components/nodes/FlowNodeRenderer.vue'
@@ -21,6 +22,7 @@ import { useFlowStore } from '@/stores/useFlowStore'
 import { useNodeDrawer } from '@/composables/useNodeDrawer'
 import { useCreateNodeModal } from '@/composables/useCreateNodeModal'
 import { useFlowQuery } from '@/composables/useFlowQuery'
+import { useToast } from '@/composables/useToast'
 
 const flowStore = useFlowStore()
 const nodeDrawer = useNodeDrawer()
@@ -30,7 +32,8 @@ const edgeTypes = { customEdge: markRaw(FlowAddEdge) }
 
 const { fitView, findNode, getEdges, getSelectedNodes, addSelectedElements, removeSelectedElements, viewport, setCenter } = useVueFlow()
 
-const { isLoading } = useFlowQuery()
+const { isLoading, isError } = useFlowQuery()
+const toast = useToast()
 
 const canvasContainer = useTemplateRef<HTMLElement>('canvasContainer')
 
@@ -206,6 +209,22 @@ watch(
     const selectedId = nodeDrawer.selectedNodeId.value
     if (selectedId !== null && !nodes.some((node) => String(node.id) === String(selectedId))) nodeDrawer.close()
   },
+)
+
+// A /node/:nodeId link can point at a node that doesn't exist (a stale or
+// mistyped link) or one with no drawer (trigger, connector). Checked once the
+// flow has loaded; 'post' so it runs after useFlowQuery has synced the store.
+// On a failed load the drawer stays open, so a refresh retries the same link.
+watch(
+  [() => nodeDrawer.selectedNodeId.value, isLoading],
+  ([nodeId, loading]) => {
+    if (nodeId === null || loading || isError.value) return
+    const node = flowStore.nodes.find((candidate) => String(candidate.id) === String(nodeId))
+    if (node && isInteractiveNodeType(node.type)) return
+    toast.show(node ? `${FLOW_NODE_TYPE_LABELS[node.type]} nodes have no details to edit.` : 'That node no longer exists.')
+    nodeDrawer.close({ replace: true })
+  },
+  { immediate: true, flush: 'post' },
 )
 
 let fitViewTimeout: ReturnType<typeof setTimeout> | undefined

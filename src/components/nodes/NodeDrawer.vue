@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onUnmounted, useId, useTemplateRef, watch } from 'vue'
-import { ExternalLink, X } from '@lucide/vue'
+import { Loader2, X } from '@lucide/vue'
 import { FLOW_NODE_TYPE_LABELS, NODE_TYPE_EDGE_OPTIONS } from '@/types/flow'
 import { NODE_ICON_MAP } from '@/components/icons'
 import { useFlowStore } from '@/stores/useFlowStore'
@@ -88,21 +88,19 @@ onUnmounted(() => {
         <component :is="titleIcon" v-if="titleIcon" class="size-4 shrink-0" :style="{ color: titleIconColor }" />
         {{ titleLabel }}
       </h2>
-      <div class="flex items-center gap-1">
-        <Button as-child variant="outline" size="sm">
-          <a :href="`/node/${drawer.selectedNodeId.value}`" target="_blank" rel="noopener noreferrer">
-            Open in new tab
-            <ExternalLink />
-          </a>
-        </Button>
-        <Button variant="ghost" size="icon-sm" @click="drawer.close()">
-          <X />
-          <span class="sr-only">Close</span>
-        </Button>
-      </div>
+      <Button variant="ghost" size="icon-sm" @click="drawer.close()">
+        <X />
+        <span class="sr-only">Close</span>
+      </Button>
     </div>
     <div class="min-w-0 flex-1 overflow-y-auto px-4 pt-8 pb-4">
-      <NodeDetailsPanel :node-id="drawer.selectedNodeId.value" :show-footer="false" @deleted="drawer.close()" />
+      <NodeDetailsPanel v-if="node" :node-id="node.id" />
+      <!-- A /node/:nodeId link opens the drawer before the flow has loaded;
+           CanvasView closes it if the node turns out not to exist. -->
+      <div v-else class="flex justify-center py-12 text-gray-500">
+        <Loader2 class="size-5 animate-spin" />
+        <span class="sr-only">Loading node</span>
+      </div>
     </div>
     <div v-if="node" class="flex shrink-0 items-center gap-2 border-t border-gray-200 px-4 py-3">
       <DeleteNodeButton :node-id="node.id" @deleted="drawer.close()" />

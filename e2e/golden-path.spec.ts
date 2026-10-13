@@ -138,9 +138,12 @@ test('keyboard: open the drawer from a node, close it with Escape, and move the 
   await page.keyboard.press('Enter')
   const heading = page.getByRole('complementary', { name: 'Send Message' }).getByRole('heading')
   await expect(heading).toBeFocused()
+  const welcomeId = mockFlow.find((candidate) => candidate.name === 'Welcome message')!.id
+  await expect(page).toHaveURL(`/node/${welcomeId}`)
 
   await page.keyboard.press('Escape')
   await expect(page.getByRole('complementary')).toHaveCount(0)
+  await expect(page).toHaveURL('/')
   await expect(node).toBeFocused()
 
   // Edge "+" buttons are real buttons: reachable, labelled, and open the create modal.
@@ -163,4 +166,24 @@ test('keyboard: open the drawer from a node, close it with Escape, and move the 
 
   const persisted = await waitForPersistedFlow((nodes) => nodes.find((candidate) => candidate.id === nodeId)?.position !== undefined)
   expect(persisted.find((candidate) => candidate.id === nodeId)?.position).toBeDefined()
+})
+
+test('deep link: a /node/:nodeId URL opens the canvas with that node\'s drawer', async ({ page }) => {
+  test.setTimeout(60000)
+  const welcome = mockFlow.find((candidate) => candidate.name === 'Welcome message')!
+
+  await page.goto(`/node/${welcome.id}`)
+  const drawer = page.getByRole('complementary', { name: 'Send Message' })
+  await expect(drawer.getByLabel('Title')).toHaveValue('Welcome message')
+  await expect(page.getByRole('group', { name: 'Send Message: Welcome message' })).toBeVisible()
+
+  // A refresh keeps the drawer open.
+  await page.reload()
+  await expect(drawer.getByLabel('Title')).toHaveValue('Welcome message')
+
+  // An unknown node id closes the drawer and lands on the canvas.
+  await page.goto('/node/doesnotexist')
+  await expect(page.getByText('That node no longer exists.')).toBeVisible()
+  await expect(page).toHaveURL('/')
+  await expect(page.getByRole('complementary')).toHaveCount(0)
 })

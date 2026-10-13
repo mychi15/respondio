@@ -1,11 +1,13 @@
 import { VueQueryPlugin } from '@tanstack/vue-query'
 import type { NodeDragEvent, NodeMouseEvent } from '@vue-flow/core'
 import { VueFlow } from '@vue-flow/core'
-import { flushPromises, mount } from '@vue/test-utils'
+import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useCreateNodeModal } from '@/composables/useCreateNodeModal'
 import { useNodeDrawer } from '@/composables/useNodeDrawer'
+import { useToast } from '@/composables/useToast'
+import { router } from '@/router'
 import { useFlowStore } from '@/stores/useFlowStore'
 import { getNodeHeight, getNodeWidth } from '@/utils/flowLayout'
 import CanvasView from './CanvasView.vue'
@@ -23,9 +25,13 @@ beforeAll(() => {
   }
 })
 
-beforeEach(() => {
+// Every mounted canvas reacts to the shared route, so one left over from a
+// previous test would act on the drawer with its own, stale store.
+enableAutoUnmount(afterEach)
+
+beforeEach(async () => {
   setActivePinia(createPinia())
-  useNodeDrawer().close()
+  await useNodeDrawer().close()
 })
 
 function emitNodeClick(vueFlow: ReturnType<typeof mount<typeof VueFlow>>, data: unknown) {
@@ -47,16 +53,50 @@ describe('CanvasView', () => {
     expect(vueFlow.props('edges')).toHaveLength(mockFlowNodes.length - 1 + leafCount)
   })
 
-  it('opens the node drawer when an interactive node is clicked', async () => {
+  it('opens the node drawer and puts the node id in the URL when an interactive node is clicked', async () => {
     const wrapper = mount(CanvasView, mountOptions)
     const vueFlow = wrapper.findComponent(VueFlow)
     const sendMessageNode = mockFlowNodes.find((node) => node.type === 'sendMessage')!
 
     emitNodeClick(vueFlow, sendMessageNode)
-    await wrapper.vm.$nextTick()
+    await flushPromises()
 
     expect(useNodeDrawer().isOpen.value).toBe(true)
     expect(useNodeDrawer().selectedNodeId.value).toBe(sendMessageNode.id)
+    expect(router.currentRoute.value.path).toBe(`/node/${sendMessageNode.id}`)
+  })
+
+  it('opens the drawer for the node in the URL once the flow has loaded', async () => {
+    const sendMessageNode = mockFlowNodes.find((node) => node.type === 'sendMessage')!
+    await router.push(`/node/${sendMessageNode.id}`)
+
+    const wrapper = mount(CanvasView, { ...mountOptions, attachTo: document.body })
+    await flushPromises()
+
+    expect(wrapper.find<HTMLInputElement>('#node-details-name').element.value).toBe(sendMessageNode.name)
+    wrapper.unmount()
+  })
+
+  it('closes the drawer with a message when the URL names a node that does not exist', async () => {
+    await router.push('/node/missing')
+
+    mount(CanvasView, mountOptions)
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/')
+    expect(useToast().message.value).toBe('That node no longer exists.')
+    expect(useNodeDrawer().isOpen.value).toBe(false)
+  })
+
+  it('closes the drawer with a message when the URL names a node with no details', async () => {
+    const triggerNode = mockFlowNodes.find((node) => node.type === 'trigger')!
+    await router.push(`/node/${triggerNode.id}`)
+
+    mount(CanvasView, mountOptions)
+    await flushPromises()
+
+    expect(router.currentRoute.value.path).toBe('/')
+    expect(useToast().message.value).toBe('Trigger nodes have no details to edit.')
   })
 
   it('does not open the node drawer when a non-interactive node is clicked', async () => {
@@ -81,12 +121,13 @@ describe('CanvasView', () => {
   })
 
   it('closes the node drawer when the pane is clicked', async () => {
-    useNodeDrawer().open(2)
+    await useNodeDrawer().open(mockFlowNodes.find((node) => node.type === 'sendMessage')!.id)
     const wrapper = mount(CanvasView, mountOptions)
+    await flushPromises()
     const vueFlow = wrapper.findComponent(VueFlow)
 
     vueFlow.vm.$emit('paneClick', new MouseEvent('click'))
-    await wrapper.vm.$nextTick()
+    await flushPromises()
 
     expect(useNodeDrawer().isOpen.value).toBe(false)
     expect(useNodeDrawer().selectedNodeId.value).toBeNull()
@@ -168,6 +209,7 @@ describe('CanvasView', () => {
     const commentNode = mockFlowNodes.find((node) => node.type === 'addComment')!
 
     await findNodeElement(wrapper, commentNode.id).trigger('keydown', { key: ' ' })
+    await flushPromises()
 
     expect(useNodeDrawer().selectedNodeId.value).toBe(commentNode.id)
     wrapper.unmount()
@@ -201,9 +243,10 @@ describe('CanvasView', () => {
   it('closes the drawer when Escape is pressed on a node', async () => {
     const wrapper = await mountWithRenderedNodes()
     const sendMessageNode = mockFlowNodes.find((node) => node.type === 'sendMessage')!
-    useNodeDrawer().open(sendMessageNode.id)
+    await useNodeDrawer().open(sendMessageNode.id)
 
     await findNodeElement(wrapper, sendMessageNode.id).trigger('keydown', { key: 'Escape' })
+    await flushPromises()
 
     expect(useNodeDrawer().isOpen.value).toBe(false)
     wrapper.unmount()
@@ -272,7 +315,7 @@ describe('CanvasView', () => {
   it('opens the drawer and then pans to a partly off-screen node clicked with the mouse', async () => {
     const wrapper = await mountWithRenderedNodes()
     const [first, second] = mockFlowNodes.filter((node) => node.type === 'sendMessage' || node.type === 'addComment')
-    useNodeDrawer().open(first.id)
+    await useNodeDrawer().open(first.id)
     await flushPromises()
     const nodeElement = findNodeElement(wrapper, second.id).element
     stubRect(wrapper.find('.vue-flow').element.parentElement!, { left: 0, top: 0, width: 800, height: 600 })
@@ -281,6 +324,7 @@ describe('CanvasView', () => {
 
     nodeElement.dispatchEvent(new Event('pointerdown', { bubbles: true }))
     nodeElement.click()
+    await flushPromises()
 
     expect(useNodeDrawer().selectedNodeId.value).toBe(second.id)
     await vi.waitFor(() => expect(getTransform(wrapper)).not.toBe(before))
@@ -373,14 +417,17 @@ describe('CanvasView', () => {
   })
 
   it('closes the drawer when undo removes the selected node', async () => {
-    const wrapper = mount(CanvasView, mountOptions)
+    mount(CanvasView, mountOptions)
+    // Let the mocked fetch land first so its setNodes can't be what removes the node.
+    await flushPromises()
     const store = useFlowStore()
-    store.setNodes(mockFlowNodes)
     const created = store.createNode({ name: 'New', type: 'addComment' }, { mode: 'add', parentId: 'a9b0c1' })
-    useNodeDrawer().open(created.id)
+    await useNodeDrawer().open(created.id)
+    await flushPromises()
+    expect(useNodeDrawer().isOpen.value).toBe(true)
 
     store.undo()
-    await wrapper.vm.$nextTick()
+    await flushPromises()
 
     expect(useNodeDrawer().isOpen.value).toBe(false)
   })

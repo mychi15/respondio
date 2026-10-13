@@ -102,27 +102,7 @@ describe('NodeDetailsPanel', () => {
     expect(wrapper.text()).toContain('slot-node-id:2')
   })
 
-  it('deletes the node and emits deleted when the delete action is confirmed', async () => {
-    const store = useFlowStore()
-    const wrapper = mountPanel(2)
-
-    const deleteTrigger = wrapper.findAll('button').find((button) => button.text() === 'Delete node')
-    expect(deleteTrigger).toBeTruthy()
-    await deleteTrigger!.trigger('click')
-    await wrapper.vm.$nextTick()
-
-    const confirmButton = Array.from(document.body.querySelectorAll('button')).find(
-      (button) => button.textContent === 'Delete',
-    )
-    expect(confirmButton).toBeTruthy()
-    confirmButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-    await wrapper.vm.$nextTick()
-
-    expect(store.nodes.find((node) => node.id === 2)).toBeUndefined()
-    expect(wrapper.emitted('deleted')).toHaveLength(1)
-  })
-
-  it('does not render the delete action for non-editable nodes', () => {
+  it('does not render any actions for non-editable nodes', () => {
     const wrapper = mountPanel(1)
 
     expect(wrapper.find('button').exists()).toBe(false)

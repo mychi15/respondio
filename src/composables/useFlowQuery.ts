@@ -5,10 +5,9 @@ import { useFlowStore } from '@/stores/useFlowStore'
 import { useToast } from '@/composables/useToast'
 
 /**
- * Fetches the flow and syncs it into the store. Used by both CanvasView and
- * NodeDetailView so a direct load of /node/:nodeId (a shared link, a
- * refresh) populates the store instead of relying on CanvasView having run
- * first in the same SPA session.
+ * Fetches the flow and syncs it into the store. CanvasView renders both `/`
+ * and `/node/:nodeId`, so a direct load of a node link (a shared link, a
+ * refresh) loads the flow the same way and then opens that node's drawer.
  */
 export function useFlowQuery() {
   const flowStore = useFlowStore()

@@ -7,6 +7,7 @@ import {
   DRAWER_OVERLAY_BREAKPOINT,
   useNodeDrawer,
 } from './useNodeDrawer'
+import { router } from '@/router'
 
 const initialViewportWidth = window.innerWidth
 
@@ -16,9 +17,9 @@ function setViewportWidth(width: number) {
 }
 
 describe('useNodeDrawer', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     setViewportWidth(1920)
-    useNodeDrawer().close()
+    await useNodeDrawer().close()
     useNodeDrawer().setWidth(DRAWER_DEFAULT_WIDTH)
   })
 
@@ -32,51 +33,70 @@ describe('useNodeDrawer', () => {
     expect(selectedNodeId.value).toBeNull()
   })
 
-  it('open sets isOpen and stores the node id', () => {
+  it('open navigates to the node URL and selects that node', async () => {
     const { isOpen, selectedNodeId, open } = useNodeDrawer()
-    open(2)
+    await open(2)
 
+    expect(router.currentRoute.value.path).toBe('/node/2')
     expect(isOpen.value).toBe(true)
-    expect(selectedNodeId.value).toBe(2)
+    expect(selectedNodeId.value).toBe('2')
   })
 
-  it('open overwrites a previously selected node', () => {
+  it('opens for whichever node the URL names, e.g. a shared link', async () => {
+    await router.push('/node/b6a0c1')
+
+    expect(useNodeDrawer().selectedNodeId.value).toBe('b6a0c1')
+  })
+
+  it('open overwrites a previously selected node', async () => {
     const { selectedNodeId, open } = useNodeDrawer()
-    open(2)
-    open('b6a0c1')
+    await open(2)
+    await open('b6a0c1')
 
     expect(selectedNodeId.value).toBe('b6a0c1')
   })
 
-  it('open bumps focusRequest only when focus is requested', () => {
+  it('open bumps focusRequest only when focus is requested', async () => {
     const { focusRequest, open } = useNodeDrawer()
     const before = focusRequest.value
 
-    open(2)
+    await open(2)
     expect(focusRequest.value).toBe(before)
 
-    open(2, { focus: true })
+    await open(2, { focus: true })
     expect(focusRequest.value).toBe(before + 1)
   })
 
-  it('close resets isOpen and clears the selected node', () => {
+  it('close navigates back to the canvas and clears the selected node', async () => {
     const { isOpen, selectedNodeId, open, close } = useNodeDrawer()
-    open(2)
+    await open(2)
 
-    close()
+    await close()
 
+    expect(router.currentRoute.value.path).toBe('/')
     expect(isOpen.value).toBe(false)
     expect(selectedNodeId.value).toBeNull()
   })
 
-  it('shares state across separate calls since the state is module-level', () => {
+  it('close with replace drops the node URL from history instead of adding an entry', async () => {
+    const { open, close } = useNodeDrawer()
+    await open(2)
+    const historyLength = window.history.length
+
+    await close({ replace: true })
+
+    expect(router.currentRoute.value.path).toBe('/')
+    expect(window.history.length).toBe(historyLength)
+  })
+
+  it('shares state across separate calls since the state is module-level', async () => {
     const first = useNodeDrawer()
     const second = useNodeDrawer()
 
-    first.open(4)
+    await first.open(4)
 
     expect(second.isOpen.value).toBe(true)
-    expect(second.selectedNodeId.value).toBe(4)
+    expect(second.selectedNodeId.value).toBe('4')
   })
 
   it('starts at the default width', () => {

@@ -12,10 +12,8 @@ import { Button } from '@/components/ui/button'
 import BusinessHoursFields from './BusinessHoursFields.vue'
 import SendMessageFields from './SendMessageFields.vue'
 import AddCommentFields from './AddCommentFields.vue'
-import DeleteNodeButton from './DeleteNodeButton.vue'
 
-const props = withDefaults(defineProps<{ nodeId: NodeId; showFooter?: boolean }>(), { showFooter: true })
-const emit = defineEmits<{ deleted: [] }>()
+const props = defineProps<{ nodeId: NodeId }>()
 
 const flowStore = useFlowStore()
 
@@ -55,10 +53,6 @@ async function saveChanges() {
     saving.value = false
   }
 }
-
-function handleDeleted() {
-  emit('deleted')
-}
 </script>
 
 <template>
@@ -92,19 +86,5 @@ function handleDeleted() {
     <Button class="self-start" :disabled="saving" @click="saveChanges">
       {{ saving ? 'Saving…' : 'Save changes' }}
     </Button>
-
-    <section
-      v-if="showFooter"
-      aria-labelledby="delete-node-heading"
-      class="mt-4 flex flex-col items-start gap-3 rounded-lg border border-border bg-muted p-4 sm:flex-row sm:items-center sm:justify-between"
-    >
-      <div class="flex flex-col gap-1">
-        <h3 id="delete-node-heading" class="text-sm font-medium text-foreground">Delete node</h3>
-        <p class="text-xs text-muted-foreground">
-          Removes this node and every node downstream of it.
-        </p>
-      </div>
-      <DeleteNodeButton :node-id="node.id" @deleted="handleDeleted" />
-    </section>
   </div>
 </template>

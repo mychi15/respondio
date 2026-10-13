@@ -23,13 +23,13 @@ function dispatchWindowMouseEvent(type: string, clientX: number) {
 }
 
 describe('NodeDrawer', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     setActivePinia(createPinia())
     const store = useFlowStore()
     store.nodes = [sendMessageNode]
 
     const drawer = useNodeDrawer()
-    drawer.close()
+    await drawer.close()
     drawer.setWidth(DRAWER_DEFAULT_WIDTH)
     drawer.setResizing(false)
   })
@@ -40,18 +40,28 @@ describe('NodeDrawer', () => {
     expect(wrapper.find('aside').exists()).toBe(false)
   })
 
-  it('renders the node title and an open-in-new-tab link when a node is selected', () => {
-    useNodeDrawer().open(2)
+  it('renders the node title and its details when a node is selected', async () => {
+    await useNodeDrawer().open(2)
     const wrapper = mountDrawer()
 
     expect(wrapper.find('aside').exists()).toBe(true)
     expect(wrapper.text()).toContain('Send Message')
-    expect(wrapper.find('a').attributes('href')).toBe('/node/2')
+    expect(wrapper.find<HTMLInputElement>('#node-details-name').element.value).toBe('Welcome message')
+  })
+
+  it('shows a loading state while the node from the URL has not loaded yet', async () => {
+    useFlowStore().nodes = []
+    await useNodeDrawer().open(2)
+    const wrapper = mountDrawer()
+
+    expect(wrapper.find('aside').exists()).toBe(true)
+    expect(wrapper.text()).toContain('Loading node')
+    expect(wrapper.find('#node-details-name').exists()).toBe(false)
   })
 
   it('focuses and labels the drawer by its heading when opened with focus requested', async () => {
     const wrapper = mountDrawer()
-    useNodeDrawer().open(2, { focus: true })
+    await useNodeDrawer().open(2, { focus: true })
     await flushPromises()
 
     const heading = wrapper.find('h2')
@@ -61,10 +71,11 @@ describe('NodeDrawer', () => {
   })
 
   it('closes the drawer on Escape', async () => {
-    useNodeDrawer().open(2)
+    await useNodeDrawer().open(2)
     const wrapper = mountDrawer()
 
     await wrapper.find('aside').trigger('keydown', { key: 'Escape' })
+    await flushPromises()
 
     expect(useNodeDrawer().isOpen.value).toBe(false)
     wrapper.unmount()
@@ -74,7 +85,7 @@ describe('NodeDrawer', () => {
     const initialWidth = window.innerWidth
     window.innerWidth = 375
     window.dispatchEvent(new Event('resize'))
-    useNodeDrawer().open(2)
+    await useNodeDrawer().open(2)
     const wrapper = mountDrawer()
 
     expect(wrapper.find('aside').classes()).toEqual(expect.arrayContaining(['fixed', 'inset-0']))
@@ -86,18 +97,19 @@ describe('NodeDrawer', () => {
   })
 
   it('closes the drawer when the close button is clicked', async () => {
-    useNodeDrawer().open(2)
+    await useNodeDrawer().open(2)
     const wrapper = mountDrawer()
 
     const closeButton = wrapper.findAll('button').find((button) => button.find('.sr-only').text() === 'Close')
     await closeButton!.trigger('click')
+    await flushPromises()
 
     expect(useNodeDrawer().isOpen.value).toBe(false)
     expect(useNodeDrawer().selectedNodeId.value).toBeNull()
   })
 
   it('closes the drawer once the node is deleted', async () => {
-    useNodeDrawer().open(2)
+    await useNodeDrawer().open(2)
     const wrapper = mountDrawer()
 
     const deleteTrigger = wrapper.findAll('button').find((button) => button.text() === 'Delete node')
@@ -109,14 +121,14 @@ describe('NodeDrawer', () => {
     )
     expect(confirmButton).toBeTruthy()
     confirmButton!.dispatchEvent(new MouseEvent('click', { bubbles: true }))
-    await wrapper.vm.$nextTick()
+    await flushPromises()
 
     expect(useNodeDrawer().isOpen.value).toBe(false)
     expect(useNodeDrawer().selectedNodeId.value).toBeNull()
   })
 
   it('resizes the drawer while dragging the resize handle', async () => {
-    useNodeDrawer().open(2)
+    await useNodeDrawer().open(2)
     const wrapper = mountDrawer()
 
     await wrapper.find('.cursor-col-resize').trigger('mousedown', { clientX: 500 })
@@ -130,7 +142,7 @@ describe('NodeDrawer', () => {
   })
 
   it('stops reacting to mouse movement once the drag ends', async () => {
-    useNodeDrawer().open(2)
+    await useNodeDrawer().open(2)
     const wrapper = mountDrawer()
 
     await wrapper.find('.cursor-col-resize').trigger('mousedown', { clientX: 500 })
@@ -143,7 +155,7 @@ describe('NodeDrawer', () => {
   })
 
   it('stops resizing and removes its window listeners when unmounted mid-drag', async () => {
-    useNodeDrawer().open(2)
+    await useNodeDrawer().open(2)
     const wrapper = mountDrawer()
 
     await wrapper.find('.cursor-col-resize').trigger('mousedown', { clientX: 500 })

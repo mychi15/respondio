@@ -127,7 +127,7 @@ type FlowNode =
 
 ### M3 — Node Details Drawer (Core)
 - [x] Drawer component, toggled by clicking a node (closed by clicking elsewhere / close button)
-- [x] Route-driven visibility: drawer open state synced to `/node/:nodeId` (deep-linkable, shareable URL) — `/node/:nodeId` exists as a standalone detail view (`NodeDetailView.vue`, linked from the drawer's "Open in new tab") but the canvas drawer's open/closed state isn't itself synced to the route
+- [x] Route-driven visibility: drawer open state driven by `/node/:nodeId` (deep-linkable, shareable URL) — both routes render `CanvasView`; `useNodeDrawer` reads the open node from the route and `open`/`close` navigate. Replaced the earlier standalone `NodeDetailView` page
 - [x] Drawer header: editable title + description fields (inline edit, persisted to store)
 - [x] Delete node action (with confirmation) from drawer — **cascades**: deleting a node removes it and every downstream descendant (recursive `parentId` chain), including any `success`/`failure` connector branches and their children
 - [x] Guard: `trigger` / `success` / `failure` nodes never open a drawer / aren't clickable

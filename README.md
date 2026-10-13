@@ -24,9 +24,9 @@ To run the API locally instead, set `VITE_API_BASE_URL` in `.env.local` and prov
 
 3. **State.** [useFlowStore](src/stores/useFlowStore.ts) (Pinia, setup-store style) is the single source of truth for `nodes`. All mutations (`createNode`, `updateNode`, `updateBusinessHours`, `updateSendMessagePayload`, `updateComment`, `deleteNode`) act on it synchronously, then call `persist()` to push the whole flow back to the API. The store derives `vueFlowNodes`/`vueFlowEdges`/`addNodePlaceholders` as computed properties, so the canvas is always a pure function of `nodes`.
 
-4. **Editing.** Clicking an interactive node opens [NodeDrawer.vue](src/components/nodes/NodeDrawer.vue), which renders a per-type fields component (`SendMessageFields`, `AddCommentFields`, `BusinessHoursFields`) alongside the shared title/description editor and delete action. The same content is reachable as a standalone page at `/node/:nodeId` ([NodeDetailView.vue](src/views/NodeDetailView.vue)) for deep-linking/sharing.
+4. **Editing.** Clicking an interactive node opens [NodeDrawer.vue](src/components/nodes/NodeDrawer.vue), which renders a per-type fields component (`SendMessageFields`, `AddCommentFields`, `BusinessHoursFields`) alongside the shared title/description editor and delete action. The drawer is driven by the URL: opening a node navigates to `/node/:nodeId`, and loading that URL directly (a shared link, a refresh, Back/Forward) opens the canvas with that node's drawer. A link to a node that doesn't exist, or to one with no details (trigger, connector), closes the drawer with a toast.
 
-5. **Persistence.** [useFlowQuery](src/composables/useFlowQuery.ts) (TanStack Query) fetches the flow on mount and syncs it into the store; this runs in both `CanvasView` and `NodeDetailView` so a direct load of a node URL works without visiting the canvas first. `GET/POST /api/flow?key=` ([api/flow.ts](api/flow.ts)) reads/writes the flow as a single JSON value in Upstash Redis, seeding it from [api/_fixtures/mockFlow.ts](api/_fixtures/mockFlow.ts) on first read if the key doesn't exist yet. Attachment uploads go through `POST /api/upload` ([api/upload.ts](api/upload.ts)), which issues a Vercel Blob client-upload token rather than proxying the file through the function body.
+5. **Persistence.** [useFlowQuery](src/composables/useFlowQuery.ts) (TanStack Query) fetches the flow on mount and syncs it into the store; both `/` and `/node/:nodeId` render `CanvasView`, so a direct load of a node URL fetches the flow the same way before opening the drawer. `GET/POST /api/flow?key=` ([api/flow.ts](api/flow.ts)) reads/writes the flow as a single JSON value in Upstash Redis, seeding it from [api/_fixtures/mockFlow.ts](api/_fixtures/mockFlow.ts) on first read if the key doesn't exist yet. Attachment uploads go through `POST /api/upload` ([api/upload.ts](api/upload.ts)), which issues a Vercel Blob client-upload token rather than proxying the file through the function body.
 
 ## Design decisions
 
@@ -63,6 +63,9 @@ To run the API locally instead, set `VITE_API_BASE_URL` in `.env.local` and prov
 11. **`description` added to the schema as optional.** 
     The original sample payload had no description field; it was added to satisfy a title+description+type requirement per node, kept optional (not required) so empty-description rendering stays exercised, not just the populated case.
 
+12. **The URL is the source of truth for the open drawer.** 
+    `useNodeDrawer` has no `selectedNodeId` state of its own; it derives it from `route.params.nodeId`, and opening/closing the drawer is just navigation. Keeping one copy of the state means the URL and the drawer can't drift apart, and refresh, sharing a link and Back/Forward all work without extra code. `/` and `/node/:nodeId` render the same `CanvasView`, so switching between them keeps the canvas mounted (no re-fetch, no lost pan/zoom).
+
 ## Project structure
 
 ```
@@ -76,7 +79,7 @@ src/
   stores/          # useFlowStore (Pinia)
   utils/           # flowGraph (tree/edges), flowLayout (positions), validation, ids
   api/             # fetchFlow/saveFlow/uploadAttachment (client-side fetch wrappers)
-  views/           # CanvasView, NodeDetailView
+  views/           # CanvasView (renders both / and /node/:nodeId)
   router/          # route table
 api/               # Vercel Serverless Functions: /api/flow, /api/upload
 e2e/               # Playwright config helpers + golden-path spec
