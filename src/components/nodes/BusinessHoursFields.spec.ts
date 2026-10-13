@@ -5,12 +5,6 @@ import type { BusinessHoursNode } from '@/types/flow'
 import { useFlowStore } from '@/stores/useFlowStore'
 import BusinessHoursFields from './BusinessHoursFields.vue'
 
-// The real Select/Combobox are headless-UI components built on reka-ui
-// portals/positioning, which jsdom can't meaningfully render or interact
-// with. Stubbing them as plain native <select>s lets these tests exercise
-// BusinessHoursFields' own wiring (draft state, validation, save) without
-// depending on that third-party UI behavior — same approach as
-// CreateNodeForm.spec.ts.
 const SelectStub = {
   props: ['modelValue'],
   emits: ['update:modelValue'],
