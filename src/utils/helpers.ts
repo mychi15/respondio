@@ -13,3 +13,7 @@ export function generateNodeId(existingIds: Iterable<string | number> = []): str
 
   return id
 }
+
+export function getBrowserTimezone(): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone
+}

@@ -64,13 +64,14 @@ export type CreatableNodeType = (typeof TOOLBAR_CREATABLE_NODE_TYPES)[number]
 export interface NodeEdgeOptions {
   addable: boolean
   color: string
+  hoverColor: string
 }
 
 export const NODE_TYPE_EDGE_OPTIONS: Record<FlowNodeType, NodeEdgeOptions> = {
-  trigger: { addable: true, color: '#64748b' },
-  sendMessage: { addable: true, color: '#3b82f6' },
-  addComment: { addable: true, color: '#a855f7' },
-  dateTime: { addable: false, color: '#f59e0b' },
-  dateTimeConnector: { addable: true, color: '#22c55e' },
+  trigger: { addable: true, color: '#64748b', hoverColor: '#94a3b8' },
+  sendMessage: { addable: true, color: '#3b82f6', hoverColor: '#60a5fa' },
+  addComment: { addable: true, color: '#a855f7', hoverColor: '#c084fc' },
+  dateTime: { addable: false, color: '#f59e0b', hoverColor: '#fbbf24' },
+  dateTimeConnector: { addable: true, color: '#22c55e', hoverColor: '#4ade80' },
 }
 

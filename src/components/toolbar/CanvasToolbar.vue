@@ -17,7 +17,5 @@ function handleClick() {
 </script>
 
 <template>
-  <div class="absolute top-4 left-4 z-10">
-    <Button @click="handleClick">Create New Node</Button>
-  </div>
+  <Button @click="handleClick">Create New Node</Button>
 </template>

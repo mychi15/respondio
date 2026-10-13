@@ -34,7 +34,8 @@ const hoverColor = computed(() => props.data?.hoverColor ?? '#f97316')
 const edgeStyle = computed(() => ({
   ...(props.style as Record<string, unknown>),
   strokeDasharray: isAdd.value ? '6 4' : undefined,
-  stroke: isAdd.value ? (hovered.value ? hoverColor.value : '#9ca3af') : hoverColor.value,
+  stroke: props.selected ? hoverColor.value : isAdd.value ? (hovered.value ? hoverColor.value : '#9ca3af') : hoverColor.value,
+  strokeWidth: props.selected ? 2.5 : undefined,
   transition: 'stroke 150ms ease',
 }))
 
