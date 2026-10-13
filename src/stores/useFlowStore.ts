@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref, toRaw } from 'vue'
 import { useManualRefHistory } from '@vueuse/core'
+import { useMutation } from '@tanstack/vue-query'
 import type { BusinessHoursNode, ConnectorNode, CreatableNodeType, FlowNode, FlowPosition, NodeId, SendMessagePayloadItem } from '@/types/flow'
 import { buildAddNodePlaceholders, buildEdgesFromNodes, toVueFlowNodes } from '@/utils/flowGraph'
 import {
@@ -17,6 +18,7 @@ import {
 import { generateNodeId } from '@/utils/helpers'
 import { saveFlow } from '@/api/flowApi'
 import { useToast } from '@/composables/useToast'
+import { FLOW_QUERY_KEY, queryClient } from '@/lib/queryClient'
 
 export type CreateNodeAttachment =
   | { mode: 'root' }
@@ -64,13 +66,30 @@ export const useFlowStore = defineStore('flow', () => {
   // structuredClone can't clone. The flow is plain JSON data anyway.
   const history = useManualRefHistory(nodes, { clone: (value) => JSON.parse(JSON.stringify(value)), capacity: 50 })
 
-  // Chained to preserve save order — otherwise a faster second request could
-  // land before the first and get overwritten by older data.
-  let pendingSave: Promise<void> = Promise.resolve()
+  // Query owns the server copy of the flow; this store owns the editable
+  // working copy (and its undo history). Every save goes through this mutation,
+  // which writes the flow back and keeps the ['flow'] cache in step with it.
+  // The shared scope makes Query run saves one at a time, in call order, so a
+  // faster later request can't land first and be overwritten by older data.
+  const saveMutation = useMutation(
+    {
+      mutationKey: [...FLOW_QUERY_KEY, 'save'],
+      scope: { id: 'flow-save' },
+      mutationFn: saveFlow,
+      onSuccess: (_, savedNodes) => queryClient.setQueryData(FLOW_QUERY_KEY, savedNodes),
+      onError: () => toast.show('Failed to save changes. Please try again.'),
+    },
+    queryClient,
+  )
 
   function save(): Promise<void> {
-    const attempt = pendingSave.catch(() => {}).then(() => saveFlow(nodes.value))
-    pendingSave = attempt.catch(() => toast.show('Failed to save changes. Please try again.'))
+    // Snapshot now: queued saves wait their turn, and each must send the flow
+    // as it was when it was made, not whatever it is by the time it runs.
+    const snapshot: FlowNode[] = JSON.parse(JSON.stringify(nodes.value))
+    const attempt = saveMutation.mutateAsync(snapshot)
+    // onError has already shown the toast; this keeps fire-and-forget callers
+    // from raising an unhandled rejection, while awaiting callers still see it.
+    attempt.catch(() => {})
     return attempt
   }
 

@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/vue-query'
 import { watch } from 'vue'
 import { fetchFlow } from '@/api/flowApi'
 import { useFlowStore } from '@/stores/useFlowStore'
+import { FLOW_QUERY_KEY } from '@/lib/queryClient'
 import { useToast } from '@/composables/useToast'
 
 /**
@@ -14,13 +15,21 @@ export function useFlowQuery() {
   const toast = useToast()
 
   const query = useQuery({
-    queryKey: ['flow'],
+    queryKey: FLOW_QUERY_KEY,
     queryFn: fetchFlow,
   })
 
-  watch(query.data, (nodes) => {
-    if (nodes) flowStore.setNodes(nodes)
-  })
+  // Seeds the store from the first successful load only. After that the
+  // store's working copy leads, and the save mutation writes each saved
+  // snapshot back into this cache; re-seeding on those updates would reset
+  // undo history and could overwrite edits made while a save was in flight.
+  watch(
+    query.data,
+    (nodes) => {
+      if (nodes) flowStore.setNodes(nodes)
+    },
+    { once: true },
+  )
 
   watch(query.isError, (hasError) => {
     if (hasError) toast.show('Failed to load the flow. Please refresh.')

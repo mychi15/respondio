@@ -2,6 +2,8 @@ import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { saveFlow } from '@/api/flowApi'
 import { computeNodePositions, DEFAULT_VERTICAL_SPACING, getNodeHeight, HORIZONTAL_SPACING, positionBelow } from '@/utils/flowLayout'
+import { useToast } from '@/composables/useToast'
+import { FLOW_QUERY_KEY, queryClient } from '@/lib/queryClient'
 import { useFlowStore } from './useFlowStore'
 import mockFlowNodes from '../../api/_fixtures/mockFlow'
 
@@ -338,5 +340,77 @@ describe('useFlowStore positions and history', () => {
     store.moveNodes([{ id: 'f3a4b5', position: { x: 5, y: 6 } }])
     store.setNodes(mockFlowNodes)
     expect(store.canUndo).toBe(false)
+  })
+})
+
+describe('useFlowStore saving through the Query mutation', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.mocked(saveFlow).mockClear()
+    queryClient.clear()
+  })
+
+  function loadedStore() {
+    const store = useFlowStore()
+    store.setNodes(mockFlowNodes)
+    return store
+  }
+
+  it('saves the flow and writes the saved copy into the flow query cache', async () => {
+    const store = loadedStore()
+    store.updateNode(mockFlowNodes[1].id, { name: 'Renamed' })
+
+    await store.persist()
+
+    expect(saveFlow).toHaveBeenCalledTimes(1)
+    const cached = queryClient.getQueryData<typeof mockFlowNodes>(FLOW_QUERY_KEY)
+    expect(cached?.find((node) => node.id === mockFlowNodes[1].id)?.name).toBe('Renamed')
+    expect(queryClient.getMutationCache().findAll({ mutationKey: [...FLOW_QUERY_KEY, 'save'] })).toHaveLength(1)
+  })
+
+  it('runs saves one at a time, each sending the flow as it was when it was made', async () => {
+    let finishFirst!: () => void
+    vi.mocked(saveFlow).mockImplementationOnce(() => new Promise<void>((resolve) => (finishFirst = resolve)))
+    const store = loadedStore()
+    const id = mockFlowNodes[1].id
+
+    store.updateNode(id, { name: 'First' })
+    const first = store.persist()
+    store.updateNode(id, { name: 'Second' })
+    const second = store.persist()
+
+    await vi.waitFor(() => expect(saveFlow).toHaveBeenCalledTimes(1))
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(saveFlow).toHaveBeenCalledTimes(1)
+
+    finishFirst()
+    await Promise.all([first, second])
+
+    const sentNames = vi.mocked(saveFlow).mock.calls.map(([nodes]) => nodes.find((node) => node.id === id)?.name)
+    expect(sentNames).toEqual(['First', 'Second'])
+  })
+
+  it('shows a toast and rejects persist() when a save fails, without touching the cache', async () => {
+    vi.mocked(saveFlow).mockRejectedValueOnce(new Error('Failed to save flow (500)'))
+    const store = loadedStore()
+    store.updateNode(mockFlowNodes[1].id, { name: 'Renamed' })
+
+    await expect(store.persist()).rejects.toThrow('Failed to save flow (500)')
+
+    expect(useToast().message.value).toBe('Failed to save changes. Please try again.')
+    expect(queryClient.getQueryData(FLOW_QUERY_KEY)).toBeUndefined()
+  })
+
+  it('keeps going after a failed save', async () => {
+    vi.mocked(saveFlow).mockRejectedValueOnce(new Error('Failed to save flow (500)'))
+    const store = loadedStore()
+
+    store.updateNode(mockFlowNodes[1].id, { name: 'Lost' })
+    await store.persist().catch(() => {})
+    store.updateNode(mockFlowNodes[1].id, { name: 'Kept' })
+    await store.persist()
+
+    expect(saveFlow).toHaveBeenCalledTimes(2)
+    expect(queryClient.getQueryData<typeof mockFlowNodes>(FLOW_QUERY_KEY)?.find((node) => node.id === mockFlowNodes[1].id)?.name).toBe('Kept')
   })
 })
