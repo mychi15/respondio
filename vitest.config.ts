@@ -8,6 +8,7 @@ export default mergeConfig(
     test: {
       environment: 'jsdom',
       exclude: ['**/node_modules/**', '**/e2e/**'],
+      setupFiles: ['./src/test/setup.ts'],
       root: fileURLToPath(new URL('./', import.meta.url)),
     },
   }),
