@@ -1,5 +1,5 @@
 import type { Edge, Node } from '@vue-flow/core'
-import { NODE_TYPE_EDGE_OPTIONS, NON_INTERACTIVE_NODE_TYPES } from '@/types/flow'
+import { FLOW_NODE_TYPE_LABELS, NODE_TYPE_EDGE_OPTIONS, NON_INTERACTIVE_NODE_TYPES } from '@/types/flow'
 import type { FlowNode, FlowNodeType, NodeId } from '@/types/flow'
 import { camelCaseToWords } from './helpers'
 import { computeNodePositions, DEFAULT_VERTICAL_SPACING, getNodeHeight, getNodeWidth, groupChildrenByParent, walkNodesDepthFirst } from './flowLayout'
@@ -110,6 +110,8 @@ export function toVueFlowNodes(nodes: FlowNode[], positions?: Map<NodeId, FlowPo
       draggable: true,
       selectable: interactive,
       focusable: interactive,
+      ariaLabel: interactive ? [FLOW_NODE_TYPE_LABELS[node.type], node.name].filter(Boolean).join(': ') : undefined,
+      domAttributes: interactive ? { 'aria-keyshortcuts': 'Enter Space' } : undefined,
     }
   })
 }

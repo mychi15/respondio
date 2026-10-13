@@ -36,7 +36,7 @@ describe('FlowAddEdge', () => {
     const data: AddEdgeData = { kind: 'insert', sourceId: 1, targetId: 2, hoverColor: '#f97316', addable: true }
     const wrapper = mount(FlowAddEdge, { props: buildProps(data) })
 
-    await wrapper.find('div.cursor-pointer').trigger('click')
+    await wrapper.find('button').trigger('click')
 
     const { isOpen, invocation } = useCreateNodeModal()
     expect(isOpen.value).toBe(true)
@@ -50,7 +50,7 @@ describe('FlowAddEdge', () => {
     const data: AddEdgeData = { kind: 'add', sourceId: 1, parentId: 3, hoverColor: '#f97316', addable: true }
     const wrapper = mount(FlowAddEdge, { props: buildProps(data) })
 
-    await wrapper.find('div.cursor-pointer').trigger('click')
+    await wrapper.find('button').trigger('click')
 
     const { isOpen, invocation } = useCreateNodeModal()
     expect(isOpen.value).toBe(true)
@@ -64,13 +64,33 @@ describe('FlowAddEdge', () => {
     const data: AddEdgeData = { kind: 'add', sourceId: 1, parentId: 1, hoverColor: '#f97316', addable: false }
     const wrapper = mount(FlowAddEdge, { props: buildProps(data) })
 
-    expect(wrapper.find('div.cursor-pointer').exists()).toBe(false)
+    expect(wrapper.find('button').exists()).toBe(false)
   })
 
   it('renders the add button when the edge is addable', () => {
     const data: AddEdgeData = { kind: 'add', sourceId: 1, parentId: 1, hoverColor: '#f97316', addable: true }
     const wrapper = mount(FlowAddEdge, { props: buildProps(data) })
 
-    expect(wrapper.find('div.cursor-pointer').exists()).toBe(true)
+    expect(wrapper.find('button').exists()).toBe(true)
+  })
+
+  it('labels the button with the nodes it adds between', () => {
+    const data: AddEdgeData = { kind: 'insert', sourceId: 1, targetId: 2, hoverColor: '#f97316', addable: true }
+    const props = {
+      ...buildProps(data),
+      sourceNode: { data: { id: 1, type: 'sendMessage', name: 'Welcome message' } } as GraphNode,
+      targetNode: { data: { id: 2, type: 'addComment' } } as GraphNode,
+    }
+    const wrapper = mount(FlowAddEdge, { props })
+
+    expect(wrapper.find('button').attributes('aria-label')).toBe('Insert node between Welcome message and Add Comment')
+  })
+
+  it('labels an add button after its parent node', () => {
+    const data: AddEdgeData = { kind: 'add', sourceId: 1, parentId: 1, hoverColor: '#f97316', addable: true }
+    const props = { ...buildProps(data), sourceNode: { data: { id: 1, type: 'sendMessage', name: 'Welcome message' } } as GraphNode }
+    const wrapper = mount(FlowAddEdge, { props })
+
+    expect(wrapper.find('button').attributes('aria-label')).toBe('Add node after Welcome message')
   })
 })

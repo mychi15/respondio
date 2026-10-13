@@ -3,6 +3,8 @@ import { computed, ref } from 'vue'
 import type { CSSProperties } from 'vue'
 import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath } from '@vue-flow/core'
 import type { EdgeProps } from '@vue-flow/core'
+import { FLOW_NODE_TYPE_LABELS } from '@/types/flow'
+import type { FlowNode } from '@/types/flow'
 import type { AddEdgeData } from '@/utils/flowGraph'
 import { useCreateNodeModal } from '@/composables/useCreateNodeModal'
 import { PlusCircleIcon } from '@/components/icons'
@@ -51,6 +53,15 @@ const buttonStyle = computed<CSSProperties>(() => ({
   color: isAdd.value ? (hovered.value ? hoverColor.value : undefined) : hoverColor.value,
 }))
 
+function nodeLabel(data: FlowNode | undefined): string {
+  return data ? (data.name ?? FLOW_NODE_TYPE_LABELS[data.type]) : 'node'
+}
+
+const buttonLabel = computed(() => {
+  const source = nodeLabel(props.sourceNode?.data as FlowNode | undefined)
+  return isAdd.value ? `Add node after ${source}` : `Insert node between ${source} and ${nodeLabel(props.targetNode?.data as FlowNode | undefined)}`
+})
+
 function handleClick() {
   if (!props.data) return
 
@@ -68,15 +79,19 @@ function handleClick() {
 <template>
   <BaseEdge :id="id" :path="path[0]" :marker-end="markerEnd" :style="edgeStyle" />
   <EdgeLabelRenderer v-if="isAddable">
-    <div
+    <button
+      type="button"
       :style="buttonStyle"
-      class="flex size-5 cursor-pointer items-center justify-center rounded-full bg-white transition-colors"
+      :aria-label="buttonLabel"
+      class="nodrag nopan flex size-5 cursor-pointer items-center justify-center rounded-full bg-white transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500"
       :class="hovered ? '' : 'text-gray-400'"
       @mouseenter="hovered = true"
       @mouseleave="hovered = false"
+      @focus="hovered = true"
+      @blur="hovered = false"
       @click.stop="handleClick"
     >
-      <PlusCircleIcon class="size-4" />
-    </div>
+      <PlusCircleIcon class="size-4" aria-hidden="true" />
+    </button>
   </EdgeLabelRenderer>
 </template>

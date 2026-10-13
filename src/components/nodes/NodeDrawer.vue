@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onUnmounted } from 'vue'
+import { computed, nextTick, onUnmounted, useId, useTemplateRef, watch } from 'vue'
 import { ExternalLink, X } from '@lucide/vue'
 import { FLOW_NODE_TYPE_LABELS } from '@/types/flow'
 import { NODE_ICON_MAP } from '@/components/icons'
@@ -17,6 +17,22 @@ const node = computed(() => flowStore.nodes.find((candidate) => String(candidate
 const titleIcon = computed(() => (node.value && node.value.type !== 'dateTimeConnector' ? NODE_ICON_MAP[node.value.type] : undefined))
 
 const titleLabel = computed(() => (node.value ? FLOW_NODE_TYPE_LABELS[node.value.type] : 'Node details'))
+
+const titleId = useId()
+const titleRef = useTemplateRef<HTMLHeadingElement>('title')
+
+// Keyboard opens move focus to the heading so it's announced and Tab
+// continues into the fields.
+watch(drawer.focusRequest, async () => {
+  await nextTick()
+  titleRef.value?.focus()
+})
+
+function handleEscape(event: KeyboardEvent) {
+  // Popovers/comboboxes inside the drawer handle their own Escape first.
+  if (event.defaultPrevented) return
+  drawer.close()
+}
 
 function handleMouseMove(startX: number, startWidth: number) {
   return (event: MouseEvent) => {
@@ -53,6 +69,8 @@ onUnmounted(() => {
   <aside
     v-if="drawer.selectedNodeId.value !== null"
     class="relative flex h-full min-w-0 flex-col overflow-y-auto border-l border-gray-200 bg-white"
+    :aria-labelledby="titleId"
+    @keydown.esc="handleEscape"
   >
     <div
       class="absolute inset-y-0 left-0 z-10 w-2 -translate-x-1/2 cursor-col-resize touch-none select-none hover:bg-blue-400/30"
@@ -60,7 +78,7 @@ onUnmounted(() => {
       @mousedown.prevent="startResize"
     />
     <div class="flex shrink-0 items-center justify-between gap-2 border-b border-gray-200 px-4 py-3">
-      <h2 class="flex items-center gap-1.5 text-sm font-semibold text-gray-900">
+      <h2 :id="titleId" ref="title" tabindex="-1" class="flex items-center gap-1.5 text-sm font-semibold text-gray-900 outline-none">
         <component :is="titleIcon" v-if="titleIcon" class="size-4 shrink-0 text-gray-500" />
         {{ titleLabel }}
       </h2>

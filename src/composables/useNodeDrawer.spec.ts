@@ -29,6 +29,17 @@ describe('useNodeDrawer', () => {
     expect(selectedNodeId.value).toBe('b6a0c1')
   })
 
+  it('open bumps focusRequest only when focus is requested', () => {
+    const { focusRequest, open } = useNodeDrawer()
+    const before = focusRequest.value
+
+    open(2)
+    expect(focusRequest.value).toBe(before)
+
+    open(2, { focus: true })
+    expect(focusRequest.value).toBe(before + 1)
+  })
+
   it('close resets isOpen and clears the selected node', () => {
     const { isOpen, selectedNodeId, open, close } = useNodeDrawer()
     open(2)

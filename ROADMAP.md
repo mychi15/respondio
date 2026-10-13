@@ -167,7 +167,9 @@ type FlowNode =
 - [ ] Accessibility pass on drawer (focus trap, `useId()` for form fields, keyboard close)
 - [ ] Empty states (no nodes yet, no attachments, no comments, no `description` on a node)
 - [x] CI/CD pipeline for running tests — GitHub Actions (`.github/workflows/ci.yml`): lint, typecheck, unit tests, build, then serialized Playwright e2e against the deployed API; deploys stay on Vercel Git integration
-- [ ] Keyboard accessibility for selecting nodes and opening details drawer
+- [x] Keyboard accessibility for selecting nodes and opening details drawer — Tab to interactive nodes (visible focus ring, `aria-label`), Enter/Space opens the drawer and focuses its heading, Escape closes it and returns focus to the node; arrow-key node moves now persist (one undo step per keyup); Vue Flow's Backspace delete disabled so deletes always go through the store
+  - [x] Edge "+" quick-add buttons (`FlowAddEdge.vue`) are real `<button>`s with descriptive `aria-label`s ("Add node after …" / "Insert node between … and …"); edges themselves are no longer tab stops
+  - [x] Focusing an off-screen node or "+" button pans the viewport to it (`setCenter` at the current zoom)
 - [x] Undo/redo actions on node details or positions updates — snapshot history (`useManualRefHistory`) committed on every `persist()`; nodes are now draggable with positions stored on each node, plus an Auto-align toolbar action
 - [ ] Responsive check for drawer on smaller viewports
 - [x] Full lint + typecheck + test pass (`pnpm lint`, `pnpm typecheck`, `pnpm test`)

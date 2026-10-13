@@ -12,6 +12,7 @@ function flowUrl(): string {
 interface PersistedNode {
   id: string | number
   name?: string
+  position?: { x: number; y: number }
   data: { payload?: Array<{ type: string; text?: string; attachment?: string }> }
 }
 
@@ -57,6 +58,10 @@ async function resetTestFlow(): Promise<void> {
   // confirm the reset actually landed before the test builds on top of it.
   await waitForPersistedFlow((nodes) => nodes.length === mockFlow.length && !nodes.some((n) => n.name?.startsWith('E2E Test Node')))
 }
+
+// Every test resets and mutates the same test flow key, so they can't run in
+// parallel with each other even though the config is fullyParallel.
+test.describe.configure({ mode: 'default' })
 
 test.beforeEach(async () => {
   await resetTestFlow()
@@ -118,4 +123,44 @@ test('golden path: load, create, edit, upload, type-specific edit, delete (casca
   const afterDelete = await waitForPersistedFlow((nodes) => !nodes.some((node) => node.name === 'E2E Test Node (edited)'))
   expect(afterDelete.some((node) => node.name === 'E2E Test Node (edited)')).toBe(false)
   expect(afterDelete).toHaveLength(mockFlow.length)
+})
+
+test('keyboard: open the drawer from a node, close it with Escape, and move the node', async ({ page }) => {
+  test.setTimeout(60000)
+
+  await page.goto('/')
+  await page.getByText('Loading flow…').waitFor({ state: 'hidden' })
+
+  const node = page.getByRole('group', { name: 'Send Message: Welcome message' })
+  await node.focus()
+  await expect(node).toBeFocused()
+
+  await page.keyboard.press('Enter')
+  const heading = page.getByRole('complementary', { name: 'Send Message' }).getByRole('heading')
+  await expect(heading).toBeFocused()
+
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('complementary')).toHaveCount(0)
+  await expect(node).toBeFocused()
+
+  // Edge "+" buttons are real buttons: reachable, labelled, and open the create modal.
+  const addButton = page.getByRole('button', { name: 'Add node after After-hours message' })
+  await addButton.focus()
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(addButton).toBeFocused()
+
+  // Vue Flow only arrow-moves a selected node; opening selects it, then move
+  // with focus back on the node. The fixture has no stored positions, so any
+  // persisted position means the keyboard move was saved.
+  const nodeId = mockFlow.find((candidate) => candidate.name === 'Welcome message')!.id
+  await node.focus()
+  await page.keyboard.press('Enter')
+  await node.focus()
+  await page.keyboard.press('ArrowRight')
+
+  const persisted = await waitForPersistedFlow((nodes) => nodes.find((candidate) => candidate.id === nodeId)?.position !== undefined)
+  expect(persisted.find((candidate) => candidate.id === nodeId)?.position).toBeDefined()
 })

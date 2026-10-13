@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { FlowNode } from '@/types/flow'
@@ -47,6 +47,27 @@ describe('NodeDrawer', () => {
     expect(wrapper.find('aside').exists()).toBe(true)
     expect(wrapper.text()).toContain('Send Message')
     expect(wrapper.find('a').attributes('href')).toBe('/node/2')
+  })
+
+  it('focuses and labels the drawer by its heading when opened with focus requested', async () => {
+    const wrapper = mountDrawer()
+    useNodeDrawer().open(2, { focus: true })
+    await flushPromises()
+
+    const heading = wrapper.find('h2')
+    expect(document.activeElement).toBe(heading.element)
+    expect(wrapper.find('aside').attributes('aria-labelledby')).toBe(heading.attributes('id'))
+    wrapper.unmount()
+  })
+
+  it('closes the drawer on Escape', async () => {
+    useNodeDrawer().open(2)
+    const wrapper = mountDrawer()
+
+    await wrapper.find('aside').trigger('keydown', { key: 'Escape' })
+
+    expect(useNodeDrawer().isOpen.value).toBe(false)
+    wrapper.unmount()
   })
 
   it('closes the drawer when the close button is clicked', async () => {
