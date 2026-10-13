@@ -26,7 +26,7 @@ const sendMessageNode: FlowNode = {
   type: 'sendMessage',
   name: 'Welcome message',
   description: 'A long description that should be clamped to three lines of text in the card body.',
-  data: { payload: [{ type: 'text', text: 'Hi!' }] },
+  data: { payload: [] },
 }
 
 const triggerNode: FlowNode = {

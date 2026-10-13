@@ -1,0 +1,87 @@
+<script setup lang="ts">
+import { computed, onUnmounted } from 'vue'
+import { ExternalLink, X } from '@lucide/vue'
+import { FLOW_NODE_TYPE_LABELS } from '@/types/flow'
+import { NODE_ICON_MAP } from '@/components/icons'
+import { useFlowStore } from '@/stores/useFlowStore'
+import { useNodeDrawer } from '@/composables/useNodeDrawer'
+import { Button } from '@/components/ui/button'
+import DeleteNodeButton from './DeleteNodeButton.vue'
+import NodeDetailsPanel from './NodeDetailsPanel.vue'
+
+const drawer = useNodeDrawer()
+const flowStore = useFlowStore()
+
+const node = computed(() => flowStore.nodes.find((candidate) => String(candidate.id) === String(drawer.selectedNodeId.value)))
+
+const titleIcon = computed(() => (node.value && node.value.type !== 'dateTimeConnector' ? NODE_ICON_MAP[node.value.type] : undefined))
+
+const titleLabel = computed(() => (node.value ? FLOW_NODE_TYPE_LABELS[node.value.type] : 'Node details'))
+
+function handleMouseMove(startX: number, startWidth: number) {
+  return (event: MouseEvent) => {
+    drawer.setWidth(startWidth + (startX - event.clientX))
+  }
+}
+
+let activeMouseMove: ((event: MouseEvent) => void) | undefined
+let activeMouseUp: (() => void) | undefined
+
+function stopResize() {
+  drawer.setResizing(false)
+  if (activeMouseMove) window.removeEventListener('mousemove', activeMouseMove)
+  if (activeMouseUp) window.removeEventListener('mouseup', activeMouseUp)
+  activeMouseMove = undefined
+  activeMouseUp = undefined
+}
+
+function startResize(event: MouseEvent) {
+  drawer.setResizing(true)
+  activeMouseMove = handleMouseMove(event.clientX, drawer.width.value)
+  activeMouseUp = stopResize
+
+  window.addEventListener('mousemove', activeMouseMove)
+  window.addEventListener('mouseup', activeMouseUp)
+}
+
+onUnmounted(() => {
+  stopResize()
+})
+</script>
+
+<template>
+  <aside
+    v-if="drawer.selectedNodeId.value !== null"
+    class="relative flex h-full min-w-0 flex-col overflow-y-auto border-l border-gray-200 bg-white"
+  >
+    <div
+      class="absolute inset-y-0 left-0 z-10 w-2 -translate-x-1/2 cursor-col-resize touch-none select-none hover:bg-blue-400/30"
+      :class="drawer.isResizing.value && 'bg-blue-400/40'"
+      @mousedown.prevent="startResize"
+    />
+    <div class="flex shrink-0 items-center justify-between gap-2 border-b border-gray-200 px-4 py-3">
+      <h2 class="flex items-center gap-1.5 text-sm font-semibold text-gray-900">
+        <component :is="titleIcon" v-if="titleIcon" class="size-4 shrink-0 text-gray-500" />
+        {{ titleLabel }}
+      </h2>
+      <div class="flex items-center gap-1">
+        <Button as-child variant="outline" size="sm">
+          <a :href="`/node/${drawer.selectedNodeId.value}`" target="_blank" rel="noopener noreferrer">
+            Open in new tab
+            <ExternalLink />
+          </a>
+        </Button>
+        <Button variant="ghost" size="icon-sm" @click="drawer.close()">
+          <X />
+          <span class="sr-only">Close</span>
+        </Button>
+      </div>
+    </div>
+    <div class="min-w-0 flex-1 overflow-y-auto px-4 py-4">
+      <NodeDetailsPanel :node-id="drawer.selectedNodeId.value" :show-footer="false" @deleted="drawer.close()" />
+    </div>
+    <div v-if="node" class="flex shrink-0 items-center gap-2 border-t border-gray-200 px-4 py-3">
+      <DeleteNodeButton :node-id="node.id" @deleted="drawer.close()" />
+    </div>
+  </aside>
+</template>
