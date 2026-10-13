@@ -7,7 +7,14 @@ import {
   computeNodePositions,
   getNodeHeight,
 } from './flowLayout'
-import { buildAddNodePlaceholders, buildEdgesFromNodes, buildNodeTree, isInteractiveNodeType, toVueFlowNodes } from './flowGraph'
+import {
+  buildAddNodePlaceholders,
+  buildEdgesFromNodes,
+  buildNodeTree,
+  getNodeDescription,
+  isInteractiveNodeType,
+  toVueFlowNodes,
+} from './flowGraph'
 
 const sample: FlowNode[] = [
   { id: 1, parentId: -1, type: 'trigger', data: { type: 'conversationOpened', oncePerContact: true } },
@@ -170,5 +177,63 @@ describe('buildAddNodePlaceholders', () => {
 
     const leafBottomY = leafPosition.y + getNodeHeight(leaf) / 2
     expect(placeholder.position).toEqual({ x: leafPosition.x, y: leafBottomY + DEFAULT_VERTICAL_SPACING / 2 })
+  })
+})
+
+describe('getNodeDescription', () => {
+  it('prefers an explicit description override regardless of type', () => {
+    const node: FlowNode = {
+      id: 1,
+      parentId: -1,
+      type: 'dateTime',
+      description: 'custom note',
+      data: { times: [], connectors: [], timezone: 'UTC', action: 'businessHours' },
+    }
+    expect(getNodeDescription(node)).toBe('custom note')
+  })
+
+  it('describes a dateTime node by its timezone', () => {
+    const node: FlowNode = {
+      id: 1,
+      parentId: -1,
+      type: 'dateTime',
+      data: { times: [], connectors: [], timezone: 'Asia/Kuala_Lumpur', action: 'businessHours' },
+    }
+    expect(getNodeDescription(node)).toBe('Business Hours - Asia/Kuala_Lumpur')
+  })
+
+  it('describes a trigger node by its camelCase type', () => {
+    const node: FlowNode = {
+      id: 1,
+      parentId: -1,
+      type: 'trigger',
+      data: { type: 'conversationOpened', oncePerContact: true },
+    }
+    expect(getNodeDescription(node)).toBe('Conversation Opened')
+  })
+
+  it('describes a sendMessage node by joining its text payload items', () => {
+    const node: FlowNode = {
+      id: 1,
+      parentId: -1,
+      type: 'sendMessage',
+      data: { payload: [{ type: 'text', text: 'Hi' }, { type: 'text', text: 'there' }] },
+    }
+    expect(getNodeDescription(node)).toBe('Message:\nHi there')
+  })
+
+  it('returns undefined for a sendMessage node with an empty payload', () => {
+    const node: FlowNode = { id: 1, parentId: -1, type: 'sendMessage', data: { payload: [] } }
+    expect(getNodeDescription(node)).toBeUndefined()
+  })
+
+  it('returns undefined for an addComment node with no description override', () => {
+    const node: FlowNode = { id: 1, parentId: -1, type: 'addComment', data: { comment: 'internal note' } }
+    expect(getNodeDescription(node)).toBeUndefined()
+  })
+
+  it('returns undefined for a connector node', () => {
+    const node: FlowNode = { id: 1, parentId: -1, type: 'dateTimeConnector', data: { connectorType: 'success' } }
+    expect(getNodeDescription(node)).toBeUndefined()
   })
 })

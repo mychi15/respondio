@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, markRaw } from 'vue'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 import { VueFlow } from '@vue-flow/core'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
-import FlowNodeRenderer from '@/components/FlowNodeRenderer.vue'
+import FlowNodeRenderer from '@/components/nodes/FlowNodeRenderer.vue'
 import FlowAddEdge from '@/components/edges/FlowAddEdge.vue'
 import AddNodePlaceholder from '@/components/nodes/AddNodePlaceholder.vue'
 import CanvasToolbar from '@/components/toolbar/CanvasToolbar.vue'
@@ -13,8 +13,8 @@ import CreateNodeModal from '@/components/toolbar/CreateNodeModal.vue'
 import { useFlowStore } from '@/stores/useFlowStore'
 
 const flowStore = useFlowStore()
-const nodeTypes = { flowNode: FlowNodeRenderer, addNodePlaceholder: AddNodePlaceholder }
-const edgeTypes = { customEdge: FlowAddEdge }
+const nodeTypes = { flowNode: markRaw(FlowNodeRenderer), addNodePlaceholder: markRaw(AddNodePlaceholder) }
+const edgeTypes = { customEdge: markRaw(FlowAddEdge) }
 
 const canvasNodes = computed(() => [...flowStore.vueFlowNodes, ...flowStore.addNodePlaceholders.nodes])
 const canvasEdges = computed(() => [...flowStore.vueFlowEdges, ...flowStore.addNodePlaceholders.edges])

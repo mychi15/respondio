@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { NodeProps } from '@vue-flow/core'
 import { computed } from 'vue'
-import { FLOW_NODE_TYPE_LABELS, getNodeDescription } from '@/types/flow'
+import { FLOW_NODE_TYPE_LABELS } from '@/types/flow'
 import type { FlowNode } from '@/types/flow'
-import { isInteractiveNodeType } from '@/utils/flowGraph'
+import { getNodeDescription, isInteractiveNodeType } from '@/utils/flowGraph'
 import { NODE_ICON_MAP } from '@/components/icons'
 import { CONNECTOR_WIDTH, getNodeHeight, NODE_WIDTH } from '@/utils/flowLayout'
 

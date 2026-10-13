@@ -1,6 +1,7 @@
 import type { Edge, Node } from '@vue-flow/core'
-import { getNodeEdgeColor, isAddableNodeType, NON_INTERACTIVE_NODE_TYPES } from '@/types/flow'
+import { NODE_TYPE_EDGE_OPTIONS, NON_INTERACTIVE_NODE_TYPES } from '@/types/flow'
 import type { FlowNode, FlowNodeType, NodeId } from '@/types/flow'
+import { camelCaseToWords } from './helpers'
 import { computeNodePositions, DEFAULT_VERTICAL_SPACING, getNodeHeight, getNodeWidth, groupChildrenByParent, walkNodesDepthFirst } from './flowLayout'
 import type { FlowPosition } from './flowLayout'
 
@@ -11,6 +12,45 @@ export interface AddEdgeData {
   parentId?: NodeId
   hoverColor: string
   addable: boolean
+}
+
+export function getNodeEdgeColor(node: FlowNode): string {
+  if (node.type === 'dateTimeConnector') {
+    return node.data.connectorType === 'failure' ? '#ef4444' : NODE_TYPE_EDGE_OPTIONS.dateTimeConnector.color
+  }
+
+  return NODE_TYPE_EDGE_OPTIONS[node.type].color
+}
+
+export function isAddableNodeType(type: FlowNodeType): boolean {
+  return NODE_TYPE_EDGE_OPTIONS[type].addable
+}
+
+/**
+ * The single source of truth for whether (and what) description text a node
+ * renders. Shared between FlowNodeRenderer (what to display) and the layout
+ * math (how much vertical space to reserve), so the two never drift apart.
+ */
+export function getNodeDescription(node: FlowNode): string | undefined {
+  if (node.description) {
+    return node.description
+  }
+
+  if (node.type === 'dateTime') {
+    return `Business Hours - ${node.data.timezone}`
+  }
+
+  if (node.type === 'trigger') {
+    return camelCaseToWords(node.data.type)
+  }
+
+  if (node.type === 'sendMessage' && node.data.payload?.length) {
+    return `Message:\n${node.data.payload
+      .map((p) => (p.type === 'text' ? p.text : ''))
+      .join(' ')}`
+  }
+
+  return undefined
 }
 
 export function buildEdgesFromNodes(nodes: FlowNode[]): Edge<AddEdgeData>[] {
