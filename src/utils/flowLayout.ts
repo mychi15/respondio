@@ -1,4 +1,6 @@
-import type { FlowNode, NodeId } from '@/types/flow'
+import type { FlowNode, FlowPosition, NodeId } from '@/types/flow'
+
+export type { FlowPosition }
 
 export const NODE_WIDTH = 200
 
@@ -15,11 +17,6 @@ const DEFAULT_HORIZONTAL_GAP = 80
 export const HORIZONTAL_SPACING = NODE_WIDTH + DEFAULT_HORIZONTAL_GAP
 
 export const DEFAULT_VERTICAL_SPACING = 100
-
-export interface FlowPosition {
-  x: number
-  y: number
-}
 
 export function getNodeWidth(node: FlowNode): number {
   return node.type === 'dateTimeConnector' ? CONNECTOR_WIDTH : NODE_WIDTH
@@ -143,4 +140,45 @@ export function computeNodePositions(nodes: FlowNode[]): Map<NodeId, FlowPositio
   }
 
   return positions
+}
+
+/**
+ * Backfills a stored `position` for every node that lacks one (e.g. a flow
+ * saved before positions were persisted), from a single auto-layout pass.
+ * Nodes that already have a position keep it.
+ */
+export function fillMissingPositions(nodes: FlowNode[]): void {
+  if (nodes.every((node) => node.position)) return
+  const positions = computeNodePositions(nodes)
+  for (const node of nodes) {
+    node.position ??= positions.get(node.id)
+  }
+}
+
+/** Overwrites every node's stored position with a fresh auto-layout pass. */
+export function applyAutoLayout(nodes: FlowNode[]): void {
+  const positions = computeNodePositions(nodes)
+  for (const node of nodes) {
+    node.position = positions.get(node.id)
+  }
+}
+
+/** Center of `child` placed directly under `parent`, optionally shifted sideways. */
+export function positionBelow(parent: FlowNode, child: FlowNode, xOffset = 0): FlowPosition {
+  const origin = parent.position ?? { x: 0, y: 0 }
+  return {
+    x: origin.x + xOffset,
+    y: origin.y + getNodeHeight(parent) / 2 + DEFAULT_VERTICAL_SPACING + getNodeHeight(child) / 2,
+  }
+}
+
+/** Moves `rootId` and all of its descendants down by `dy`. */
+export function shiftSubtree(nodes: FlowNode[], rootId: NodeId, dy: number): void {
+  const childrenByParent = groupChildrenByParent(nodes)
+  const stack = nodes.filter((node) => node.id === rootId)
+  while (stack.length > 0) {
+    const node = stack.pop()!
+    if (node.position) node.position = { x: node.position.x, y: node.position.y + dy }
+    stack.push(...(childrenByParent.get(node.id) ?? []))
+  }
 }

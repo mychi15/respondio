@@ -24,20 +24,24 @@ describe('NodeDetailView', () => {
   })
 
   it('renders the NodeDetailsPanel for the route param node id', async () => {
-    const { wrapper } = await mountAt(2)
+    const { wrapper } = await mountAt('f3a4b5')
+    await flushPromises()
+    await wrapper.vm.$nextTick()
 
-    expect(wrapper.findComponent(NodeDetailsPanel).props('nodeId')).toBe('2')
+    expect(wrapper.findComponent(NodeDetailsPanel).props('nodeId')).toBe('f3a4b5')
     expect(wrapper.find<HTMLInputElement>('#node-details-name').element.value).toBe('Welcome message')
   })
 
   it('shows a not-found state for an unknown node id', async () => {
     const { wrapper } = await mountAt('does-not-exist')
+    await flushPromises()
 
-    expect(wrapper.text()).toContain('Node not found')
+    expect(wrapper.text()).toContain('Node not found.')
   })
 
   it('navigates back to the canvas route after the panel reports a delete', async () => {
-    const { router, wrapper } = await mountAt(6)
+    const { router, wrapper } = await mountAt('c6d7e8')
+    await flushPromises()
 
     wrapper.findComponent(NodeDetailsPanel).vm.$emit('deleted')
     await flushPromises()

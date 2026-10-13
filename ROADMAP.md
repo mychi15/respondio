@@ -166,9 +166,12 @@ type FlowNode =
 - [ ] Canvas UX: pan/zoom defaults, minimap/controls (Vue Flow built-ins) as needed
 - [ ] Accessibility pass on drawer (focus trap, `useId()` for form fields, keyboard close)
 - [ ] Empty states (no nodes yet, no attachments, no comments, no `description` on a node)
+- [ ] CI/CD pipeline for running tests
+- [ ] Keyboard accessibility for selecting nodes and opening details drawer
+- [x] Undo/redo actions on node details or positions updates — snapshot history (`useManualRefHistory`) committed on every `persist()`; nodes are now draggable with positions stored on each node, plus an Auto-align toolbar action
 - [ ] Responsive check for drawer on smaller viewports
-- [ ] Full lint + typecheck + test pass (`pnpm lint`, `pnpm typecheck`, `pnpm test`)
-- [ ] Final Vercel deploy & smoke test of golden path (create → view → edit → delete)
+- [x] Full lint + typecheck + test pass (`pnpm lint`, `pnpm typecheck`, `pnpm test`)
+- [x] Final Vercel deploy & smoke test of golden path (create → view → edit → delete)
 
 ---
 

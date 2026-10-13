@@ -3,11 +3,13 @@ import { computed, markRaw, nextTick, watch } from 'vue'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 import { useVueFlow, VueFlow } from '@vue-flow/core'
-import type { NodeMouseEvent } from '@vue-flow/core'
+import type { NodeDragEvent, NodeMouseEvent } from '@vue-flow/core'
+import { useEventListener } from '@vueuse/core'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 import type { FlowNode } from '@/types/flow'
 import { isInteractiveNodeType } from '@/utils/flowGraph'
+import { getNodeHeight, getNodeWidth } from '@/utils/flowLayout'
 import FlowNodeRenderer from '@/components/nodes/FlowNodeRenderer.vue'
 import FlowAddEdge from '@/components/edges/FlowAddEdge.vue'
 import AddNodePlaceholder from '@/components/nodes/AddNodePlaceholder.vue'
@@ -40,6 +42,42 @@ function handleNodeClick({ node }: NodeMouseEvent) {
 function handlePaneClick() {
   nodeDrawer.close()
 }
+
+function handleNodeDragStop({ nodes }: NodeDragEvent) {
+  // Vue Flow reports top-left positions; the store keeps node centers.
+  const moves = nodes.flatMap(({ data, position }) => {
+    const node = data as FlowNode | undefined
+    if (!node) return []
+    return [{ id: node.id, position: { x: position.x + getNodeWidth(node) / 2, y: position.y + getNodeHeight(node) / 2 } }]
+  })
+  flowStore.moveNodes(moves)
+}
+
+function isEditableTarget(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName))
+}
+
+// Leave Cmd/Ctrl+Z inside form fields to the browser's own text undo.
+useEventListener(window, 'keydown', (event: KeyboardEvent) => {
+  if (isEditableTarget(event.target) || !(event.metaKey || event.ctrlKey)) return
+  const key = event.key.toLowerCase()
+  if (key === 'z' && !event.shiftKey) {
+    event.preventDefault()
+    flowStore.undo()
+  } else if ((key === 'z' && event.shiftKey) || (key === 'y' && event.ctrlKey)) {
+    event.preventDefault()
+    flowStore.redo()
+  }
+})
+
+// Undo/redo can remove the node the drawer is showing (e.g. undoing a create).
+watch(
+  () => flowStore.nodes,
+  (nodes) => {
+    const selectedId = nodeDrawer.selectedNodeId.value
+    if (selectedId !== null && !nodes.some((node) => String(node.id) === String(selectedId))) nodeDrawer.close()
+  },
+)
 
 let fitViewTimeout: ReturnType<typeof setTimeout> | undefined
 
@@ -85,10 +123,10 @@ watch(
         :edges="canvasEdges"
         :node-types="nodeTypes"
         :edge-types="edgeTypes"
-        :nodes-draggable="false"
         fit-view-on-init
         @node-click="handleNodeClick"
         @pane-click="handlePaneClick"
+        @node-drag-stop="handleNodeDragStop"
       >
         <Background />
         <Controls />

@@ -1,13 +1,17 @@
 import { describe, expect, it } from 'vitest'
 import type { FlowNode } from '@/types/flow'
 import {
+  applyAutoLayout,
   computeNodePositions,
   DEFAULT_VERTICAL_SPACING,
+  fillMissingPositions,
   getNodeHeight,
   hasVariableLengthDescription,
   HORIZONTAL_SPACING,
   NODE_HEIGHT,
   NODE_WITH_DESCRIPTION_HEIGHT,
+  positionBelow,
+  shiftSubtree,
 } from './flowLayout'
 
 const sample: FlowNode[] = [
@@ -196,5 +200,66 @@ describe('hasVariableLengthDescription', () => {
   it('is false for a connector node', () => {
     const node: FlowNode = { id: 1, parentId: -1, type: 'dateTimeConnector', data: { connectorType: 'success' } }
     expect(hasVariableLengthDescription(node)).toBe(false)
+  })
+})
+
+describe('fillMissingPositions', () => {
+  it('fills every missing position from a single auto-layout pass', () => {
+    const nodes = structuredClone(sample)
+    fillMissingPositions(nodes)
+
+    const expected = computeNodePositions(sample)
+    for (const node of nodes) expect(node.position).toEqual(expected.get(node.id))
+  })
+
+  it('keeps positions that are already stored', () => {
+    const nodes = structuredClone(sample)
+    nodes[1].position = { x: 999, y: 999 }
+    fillMissingPositions(nodes)
+
+    expect(nodes[1].position).toEqual({ x: 999, y: 999 })
+    expect(nodes[0].position).toEqual(computeNodePositions(sample).get(1))
+  })
+})
+
+describe('applyAutoLayout', () => {
+  it('overwrites stored positions with the auto-layout result', () => {
+    const nodes = structuredClone(sample)
+    nodes[1].position = { x: 999, y: 999 }
+    applyAutoLayout(nodes)
+
+    expect(nodes[1].position).toEqual(computeNodePositions(sample).get(2))
+  })
+})
+
+describe('positionBelow', () => {
+  it('places the child one vertical gap below the parent, centered', () => {
+    const parent: FlowNode = { ...sample[1], position: { x: 10, y: 20 } }
+    const child = sample[2]
+
+    expect(positionBelow(parent, child)).toEqual({
+      x: 10,
+      y: 20 + getNodeHeight(parent) / 2 + DEFAULT_VERTICAL_SPACING + getNodeHeight(child) / 2,
+    })
+  })
+
+  it('applies the horizontal offset', () => {
+    const parent: FlowNode = { ...sample[2], position: { x: 0, y: 0 } }
+    expect(positionBelow(parent, sample[3], -50).x).toBe(-50)
+  })
+})
+
+describe('shiftSubtree', () => {
+  it('moves only the given node and its descendants', () => {
+    const nodes = structuredClone(sample)
+    fillMissingPositions(nodes)
+    const before = new Map(nodes.map((node) => [node.id, { ...node.position! }]))
+
+    shiftSubtree(nodes, 3, 50)
+
+    for (const node of nodes) {
+      const dy = [3, 4, 5].includes(node.id as number) ? 50 : 0
+      expect(node.position).toEqual({ x: before.get(node.id)!.x, y: before.get(node.id)!.y + dy })
+    }
   })
 })

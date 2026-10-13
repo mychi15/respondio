@@ -7,13 +7,29 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Max-Age': '86400',
 }
 
-function jsonResponse(body: unknown, status = 200): Response {
+function jsonResponse(body: unknown, status = 200, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
+    headers: { 'Content-Type': 'application/json', ...CORS_HEADERS, ...headers },
   })
+}
+
+// True until this function instance serves its first request, so that
+// request can be flagged as having paid the cold-start cost.
+let isColdStart = true
+
+/**
+ * Builds Server-Timing headers so DevTools (Network → Timing) shows where a
+ * request's server time went. Timing-Allow-Origin exposes them to the
+ * cross-origin app (localhost or the deployed frontend).
+ */
+function serverTimingHeaders(durations: Record<string, number>, cold: boolean): Record<string, string> {
+  const metrics = Object.entries(durations).map(([name, ms]) => `${name};dur=${ms.toFixed(1)}`)
+  if (cold) metrics.push('cold;desc="Cold start"')
+  return { 'Server-Timing': metrics.join(', '), 'Timing-Allow-Origin': '*' }
 }
 
 function blobUrl(key: string): string | null {
@@ -81,13 +97,24 @@ export async function GET(request: Request): Promise<Response> {
 }
 
 export async function POST(request: Request): Promise<Response> {
+  const cold = isColdStart
+  isColdStart = false
+  const start = performance.now()
+
   const key = new URL(request.url).searchParams.get('key') ?? DEFAULT_KEY
   const body = (await request.json()) as { nodes?: unknown }
+  const parsed = performance.now()
 
   if (!Array.isArray(body.nodes)) {
     return jsonResponse({ error: 'Expected a JSON body of the shape { nodes: FlowNode[] }' }, 400)
   }
 
   await writeBlob(key, JSON.stringify(body.nodes))
-  return jsonResponse({ ok: true })
+  const written = performance.now()
+
+  return jsonResponse(
+    { ok: true },
+    200,
+    serverTimingHeaders({ parse: parsed - start, blob: written - parsed, total: written - start }, cold),
+  )
 }

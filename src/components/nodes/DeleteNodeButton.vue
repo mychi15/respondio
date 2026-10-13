@@ -34,7 +34,7 @@ function handleDelete() {
       <AlertDialogHeader>
         <AlertDialogTitle>Delete this node?</AlertDialogTitle>
         <AlertDialogDescription>
-          This removes the node and every downstream descendant. This can't be undone.
+          This removes the node and every downstream descendant. You can bring it back with Undo (Ctrl/⌘+Z).
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>

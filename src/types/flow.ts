@@ -1,10 +1,16 @@
 export type NodeId = string | number
 
+export interface FlowPosition {
+  x: number
+  y: number
+}
+
 export interface BaseNode<TType extends string, TData> {
   id: NodeId
   parentId: NodeId
   name?: string
   description?: string
+  position?: FlowPosition
   type: TType
   data: TData
 }
