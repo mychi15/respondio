@@ -17,6 +17,7 @@ import CanvasToolbar from '@/components/toolbar/CanvasToolbar.vue'
 import CreateNodeModal from '@/components/toolbar/CreateNodeModal.vue'
 import { useFlowStore } from '@/stores/useFlowStore'
 import { useNodeDrawer } from '@/composables/useNodeDrawer'
+import { useFlowQuery } from '@/composables/useFlowQuery'
 
 const flowStore = useFlowStore()
 const nodeDrawer = useNodeDrawer()
@@ -24,6 +25,8 @@ const nodeTypes = { flowNode: markRaw(FlowNodeRenderer), addNodePlaceholder: mar
 const edgeTypes = { customEdge: markRaw(FlowAddEdge) }
 
 const { fitView, findNode, getEdges, addSelectedElements, removeSelectedElements } = useVueFlow()
+
+const { isLoading } = useFlowQuery()
 
 const canvasNodes = computed(() => [...flowStore.vueFlowNodes, ...flowStore.addNodePlaceholders.nodes])
 const canvasEdges = computed(() => [...flowStore.vueFlowEdges, ...flowStore.addNodePlaceholders.edges])
@@ -74,6 +77,9 @@ watch(
     :style="{ gridTemplateColumns: `1fr ${nodeDrawer.isOpen.value ? nodeDrawer.width.value : 0}px` }"
   >
     <div class="relative h-full min-w-0 overflow-hidden">
+      <div v-if="isLoading" class="absolute inset-0 z-20 flex items-center justify-center bg-white/80 text-sm text-gray-500">
+        Loading flow…
+      </div>
       <VueFlow
         :nodes="canvasNodes"
         :edges="canvasEdges"

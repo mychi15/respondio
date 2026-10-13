@@ -43,6 +43,7 @@ function saveChanges() {
   if (!node.value) return
   flowStore.updateNode(node.value.id, { name: form.name.trim(), description: form.description.trim() || undefined })
   typeFieldsRef.value?.save?.()
+  flowStore.persist()
 
   toast.show('Changes saved')
 }
