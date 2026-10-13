@@ -71,7 +71,7 @@ describe('BusinessHoursFields', () => {
     const selects = wrapper.findAll('select')
     expect(selects[0].element.value).toBe('UTC')
 
-    const startTime = wrapper.find('input[type="time"]')
+    const startTime = wrapper.find<HTMLInputElement>('input[type="time"]')
     expect(startTime.element.value).toBe('09:00')
   })
 
