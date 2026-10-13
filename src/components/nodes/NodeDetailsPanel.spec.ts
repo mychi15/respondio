@@ -1,8 +1,9 @@
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { FlowNode } from '@/types/flow'
 import { useFlowStore } from '@/stores/useFlowStore'
+import { uploadAttachment } from '@/api/uploadApi'
 import NodeDetailsPanel from './NodeDetailsPanel.vue'
 
 const triggerNode: FlowNode = {
@@ -100,6 +101,31 @@ describe('NodeDetailsPanel', () => {
     })
 
     expect(wrapper.text()).toContain('slot-node-id:2')
+  })
+
+  it('disables Save while an attachment is uploading so it is not dropped from the save', async () => {
+    let resolveUpload!: (url: string) => void
+    vi.mocked(uploadAttachment).mockReturnValueOnce(new Promise((resolve) => (resolveUpload = resolve)))
+    const store = useFlowStore()
+    const wrapper = mountPanel(2)
+    const findSave = () => wrapper.findAll('button').find((button) => ['Save changes', 'Uploading…'].includes(button.text()))!
+
+    const input = wrapper.find('input[type="file"]')
+    Object.defineProperty(input.element, 'files', { value: [new File(['content'], 'photo.png', { type: 'image/png' })] })
+    await input.trigger('change')
+
+    expect(findSave().text()).toBe('Uploading…')
+    expect(findSave().attributes('disabled')).toBeDefined()
+
+    resolveUpload('https://example.com/late.png')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    await wrapper.vm.$nextTick()
+    expect(findSave().text()).toBe('Save changes')
+    expect(findSave().attributes('disabled')).toBeUndefined()
+
+    await findSave().trigger('click')
+    const saved = store.nodes.find((node) => node.id === 2)
+    expect(saved?.type === 'sendMessage' && saved.data.payload).toContainEqual({ type: 'attachment', attachment: 'https://example.com/late.png' })
   })
 
   it('does not render any actions for non-editable nodes', () => {

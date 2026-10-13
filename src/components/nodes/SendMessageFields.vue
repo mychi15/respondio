@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { Loader2, Paperclip, X } from '@lucide/vue'
 import type { SendMessageNode, SendMessagePayloadItem } from '@/types/flow'
 import { useFlowStore } from '@/stores/useFlowStore'
@@ -25,6 +25,9 @@ let nextAttachmentId = 0
 const messageText = ref('')
 const attachments = reactive<AttachmentItem[]>([])
 const fileInput = ref<HTMLInputElement | null>(null)
+
+// Exposed so the panel can hold Save until every upload has a URL to store.
+const isUploading = computed(() => attachments.some((attachment) => attachment.uploading))
 
 watch(
   () => props.node,
@@ -92,7 +95,7 @@ function save() {
   flowStore.updateSendMessagePayload(props.node.id, payload)
 }
 
-defineExpose({ save })
+defineExpose({ save, isUploading })
 </script>
 
 <template>

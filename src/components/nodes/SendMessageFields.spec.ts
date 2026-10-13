@@ -1,8 +1,9 @@
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SendMessageNode } from '@/types/flow'
 import { useFlowStore } from '@/stores/useFlowStore'
+import { uploadAttachment } from '@/api/uploadApi'
 import SendMessageFields from './SendMessageFields.vue'
 
 const sendMessageNode: SendMessageNode = {
@@ -100,6 +101,22 @@ describe('SendMessageFields', () => {
 
     const images = wrapper.findAll('img')
     expect(images.some((img) => img.attributes('src') === 'https://example.com/mock-attachment.png')).toBe(true)
+  })
+
+  it('reports isUploading while an upload is in flight', async () => {
+    let resolveUpload!: (url: string) => void
+    vi.mocked(uploadAttachment).mockReturnValueOnce(new Promise((resolve) => (resolveUpload = resolve)))
+    const wrapper = mountFields(sendMessageNode)
+    expect(wrapper.vm.isUploading).toBe(false)
+
+    const input = wrapper.find('input[type="file"]')
+    Object.defineProperty(input.element, 'files', { value: [new File(['content'], 'photo.png', { type: 'image/png' })] })
+    await input.trigger('change')
+    expect(wrapper.vm.isUploading).toBe(true)
+
+    resolveUpload('https://example.com/late.png')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(wrapper.vm.isUploading).toBe(false)
   })
 
   it('removes an attachment when its remove button is clicked', async () => {

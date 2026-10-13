@@ -32,7 +32,10 @@ watch(
   { immediate: true },
 )
 
-const typeFieldsRef = ref<{ save?: () => void } | null>(null)
+// Exposed refs come back unwrapped through a component ref, hence `boolean`.
+const typeFieldsRef = ref<{ save?: () => void; isUploading?: boolean } | null>(null)
+
+const isUploading = computed(() => Boolean(typeFieldsRef.value?.isUploading))
 
 const toast = useToast()
 
@@ -83,8 +86,8 @@ async function saveChanges() {
       <AddCommentFields v-else-if="node.type === 'addComment'" ref="typeFieldsRef" :node="node" />
     </slot>
 
-    <Button class="self-start" :disabled="saving" @click="saveChanges">
-      {{ saving ? 'Saving…' : 'Save changes' }}
+    <Button class="self-start" :disabled="saving || isUploading" @click="saveChanges">
+      {{ saving ? 'Saving…' : isUploading ? 'Uploading…' : 'Save changes' }}
     </Button>
   </div>
 </template>
