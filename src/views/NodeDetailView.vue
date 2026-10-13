@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import NodeDetailsPanel from '@/components/nodes/NodeDetailsPanel.vue'
 import { ToastNotification } from '@/components/ui/toast'
 import { Button } from '@/components/ui/button'
-import { Loader2 } from '@lucide/vue'
+import { ArrowLeft, Loader2 } from '@lucide/vue'
 import { useFlowQuery } from '@/composables/useFlowQuery'
 
 const route = useRoute()
@@ -21,8 +21,11 @@ function handleDeleted() {
 
 <template>
   <div class="mx-auto flex max-w-xl flex-col gap-4 p-6">
-    <Button as-child variant="outline" class="self-start">
-      <router-link to="/">View canvas</router-link>
+    <Button as-child variant="outline" class="mb-4 self-start">
+      <router-link to="/">
+        <ArrowLeft />
+        View canvas
+      </router-link>
     </Button>
 
     <div v-if="isPending" class="flex items-center justify-center py-12 text-gray-500">

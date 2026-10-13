@@ -101,7 +101,7 @@ onUnmounted(() => {
         </Button>
       </div>
     </div>
-    <div class="min-w-0 flex-1 overflow-y-auto px-4 py-4">
+    <div class="min-w-0 flex-1 overflow-y-auto px-4 pt-8 pb-4">
       <NodeDetailsPanel :node-id="drawer.selectedNodeId.value" :show-footer="false" @deleted="drawer.close()" />
     </div>
     <div v-if="node" class="flex shrink-0 items-center gap-2 border-t border-gray-200 px-4 py-3">

@@ -10,6 +10,11 @@ const flowStore = useFlowStore()
 const createNodeModal = useCreateNodeModal()
 const { fitView } = useVueFlow()
 
+// Solid backgrounds keep these readable over the canvas; disabled uses a
+// darker fill instead of opacity so the canvas does not show through, and
+// re-enables pointer events so the not-allowed cursor shows on hover.
+const toolbarButtonClass = 'bg-background disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100 disabled:pointer-events-auto'
+
 function handleClick() {
   if (flowStore.nodes.length === 0) {
     flowStore.createNode({ type: 'trigger' }, { mode: 'root' })
@@ -29,13 +34,13 @@ async function handleAutoAlign() {
 <template>
   <div class="flex items-center gap-2">
     <Button @click="handleClick">Create New Node</Button>
-    <Button variant="outline" size="icon" aria-label="Undo" title="Undo (Ctrl/⌘+Z)" :disabled="!flowStore.canUndo" @click="flowStore.undo()">
+    <Button variant="outline" size="icon" :class="toolbarButtonClass" aria-label="Undo" title="Undo (Ctrl/⌘+Z)" :disabled="!flowStore.canUndo" @click="flowStore.undo()">
       <Undo2 />
     </Button>
-    <Button variant="outline" size="icon" aria-label="Redo" title="Redo (Ctrl/⌘+Shift+Z)" :disabled="!flowStore.canRedo" @click="flowStore.redo()">
+    <Button variant="outline" size="icon" :class="toolbarButtonClass" aria-label="Redo" title="Redo (Ctrl/⌘+Shift+Z)" :disabled="!flowStore.canRedo" @click="flowStore.redo()">
       <Redo2 />
     </Button>
-    <Button variant="outline" :disabled="flowStore.nodes.length === 0" @click="handleAutoAlign">
+    <Button variant="outline" :class="toolbarButtonClass" :disabled="flowStore.nodes.length === 0" @click="handleAutoAlign">
       <LayoutGrid />
       Auto-align
     </Button>

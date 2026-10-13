@@ -18,13 +18,13 @@ const { message, isVisible, dismiss } = useToast()
       v-if="isVisible"
       role="status"
       aria-live="polite"
-      class="pointer-events-auto flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800 shadow-md dark:border-green-900 dark:bg-green-950 dark:text-green-200"
+      class="pointer-events-auto flex items-center gap-2 rounded-lg border border-success-border bg-success-muted px-3 py-2 text-sm text-success-foreground shadow-md"
     >
-      <CircleCheck class="size-4 shrink-0 text-green-600 dark:text-green-400" />
+      <CircleCheck class="size-4 shrink-0 text-success" />
       <span>{{ message }}</span>
       <button
         type="button"
-        class="text-green-600/70 hover:text-green-700 dark:text-green-400/70 dark:hover:text-green-300"
+        class="text-success-foreground/70 hover:text-success-foreground"
         aria-label="Dismiss notification"
         @click="dismiss"
       >
