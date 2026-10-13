@@ -1,8 +1,6 @@
 import { handleUpload } from '@vercel/blob/client'
 import type { HandleUploadBody } from '@vercel/blob/client'
 
-export const config = { runtime: 'edge' }
-
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
