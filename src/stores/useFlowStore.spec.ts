@@ -8,6 +8,7 @@ import mockFlowNodes from '../../api/_fixtures/mockFlow'
 describe('useFlowStore', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    useFlowStore().setNodes(mockFlowNodes)
   })
 
   it('derives vueFlowNodes with the same length as the sample nodes', () => {
@@ -22,7 +23,7 @@ describe('useFlowStore', () => {
 
   it('marks the trigger node as unselectable', () => {
     const store = useFlowStore()
-    const trigger = store.vueFlowNodes.find((node) => node.id === '1')
+    const trigger = store.vueFlowNodes.find((node) => node.id === 'a1b2c3')
     expect(trigger?.selectable).toBe(false)
   })
 
@@ -38,24 +39,24 @@ describe('useFlowStore', () => {
   it('createNode with mode "add" appends a new node parented to the given node', () => {
     const store = useFlowStore()
     const before = store.nodes.length
-    store.createNode({ name: 'New Step', type: 'sendMessage' }, { mode: 'add', parentId: '4' })
+    store.createNode({ name: 'New Step', type: 'sendMessage' }, { mode: 'add', parentId: 'b7c8d9' })
 
     expect(store.nodes).toHaveLength(before + 1)
     const added = store.nodes.at(-1)!
-    expect(added.parentId).toBe('4')
+    expect(added.parentId).toBe('b7c8d9')
     expect(added.id).toMatch(/^[0-9a-f]{6}$/)
   })
 
   it('createNode with mode "insert" splices a new node between the source and target', () => {
     const store = useFlowStore()
     const before = store.nodes.length
-    store.createNode({ name: 'New Step', type: 'sendMessage' }, { mode: 'insert', sourceId: 1, targetId: 2 })
+    store.createNode({ name: 'New Step', type: 'sendMessage' }, { mode: 'insert', sourceId: 'b7c8d9', targetId: 'f3a4b5' })
 
     expect(store.nodes).toHaveLength(before + 1)
-    const target = store.nodes.find((node) => node.id === 2)!
+    const target = store.nodes.find((node) => node.id === 'f3a4b5')!
     const inserted = store.nodes.at(-1)!
     expect(target.parentId).toBe(inserted.id)
-    expect(inserted.parentId).toBe(1)
+    expect(inserted.parentId).toBe('b7c8d9')
   })
 
   it('createNode with mode "root" appends an independent trigger root with no name', () => {
@@ -74,14 +75,14 @@ describe('useFlowStore', () => {
     ['addComment', { comment: '' }],
   ] as const)('createNode fills in the default data shape for type "%s"', (type, expectedData) => {
     const store = useFlowStore()
-    const created = store.createNode({ name: 'New Node', type }, { mode: 'add', parentId: 1 })
+    const created = store.createNode({ name: 'New Node', type }, { mode: 'add', parentId: 'a1b2c3' })
     expect(created.data).toEqual(expectedData)
   })
 
   it('createNode for type "dateTime" auto-creates success/failure connector children', () => {
     const store = useFlowStore()
     const before = store.nodes.length
-    const created = store.createNode({ name: 'New Node', type: 'dateTime' }, { mode: 'add', parentId: 1 })
+    const created = store.createNode({ name: 'New Node', type: 'dateTime' }, { mode: 'add', parentId: 'a1b2c3' })
 
     expect(store.nodes).toHaveLength(before + 3)
 
@@ -103,9 +104,9 @@ describe('useFlowStore', () => {
 
   it('updateNode merges the given patch into the matching node', () => {
     const store = useFlowStore()
-    store.updateNode(2, { name: 'Renamed', description: 'New description' })
+    store.updateNode('f3a4b5', { name: 'Renamed', description: 'New description' })
 
-    const updated = store.nodes.find((node) => node.id === 2)!
+    const updated = store.nodes.find((node) => node.id === 'f3a4b5')!
     expect(updated.name).toBe('Renamed')
     expect(updated.description).toBe('New description')
   })
@@ -120,19 +121,19 @@ describe('useFlowStore', () => {
 
   it('deleteNode removes the node and every downstream descendant, including connector branches', () => {
     const store = useFlowStore()
-    // Tree: 1 -> 3 -> {4, 5}; 4 -> 2 -> 6
-    store.deleteNode(3)
+    // Tree: a1b2c3 -> d4e5f6 -> {b7c8d9, e0f1a2}; b7c8d9 -> f3a4b5 -> a9b0c1; e0f1a2 -> c6d7e8
+    store.deleteNode('d4e5f6')
 
-    expect(store.nodes.map((node) => node.id)).toEqual([1])
+    expect(store.nodes.map((node) => node.id)).toEqual(['a1b2c3'])
   })
 
   it('deleteNode on a leaf only removes that node', () => {
     const store = useFlowStore()
     const before = store.nodes.length
-    store.deleteNode(6)
+    store.deleteNode('a9b0c1')
 
     expect(store.nodes).toHaveLength(before - 1)
-    expect(store.nodes.some((node) => node.id === 6)).toBe(false)
+    expect(store.nodes.some((node) => node.id === 'a9b0c1')).toBe(false)
   })
 })
 

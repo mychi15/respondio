@@ -32,8 +32,10 @@ function emitNodeClick(vueFlow: ReturnType<typeof mount<typeof VueFlow>>, data: 
 }
 
 describe('CanvasView', () => {
-  it('passes the store sample data plus add-node placeholders through to VueFlow as nodes and edges', () => {
+  it('passes the store sample data plus add-node placeholders through to VueFlow as nodes and edges', async () => {
     const wrapper = mount(CanvasView, mountOptions)
+    useFlowStore().setNodes(mockFlowNodes)
+    await wrapper.vm.$nextTick()
 
     const leafCount = mockFlowNodes.filter(
       (node) => !mockFlowNodes.some((candidate) => candidate.parentId === node.id),
