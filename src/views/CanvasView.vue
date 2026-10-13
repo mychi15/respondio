@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed, markRaw, nextTick, watch } from 'vue'
+import { computed, markRaw, nextTick, useTemplateRef, watch } from 'vue'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 import { useVueFlow, VueFlow } from '@vue-flow/core'
 import type { GraphNode, NodeDragEvent, NodeMouseEvent } from '@vue-flow/core'
-import { useEventListener } from '@vueuse/core'
+import { useEventListener, usePreferredReducedMotion } from '@vueuse/core'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 import type { FlowNode } from '@/types/flow'
@@ -19,16 +19,20 @@ import CanvasToolbar from '@/components/toolbar/CanvasToolbar.vue'
 import CreateNodeModal from '@/components/toolbar/CreateNodeModal.vue'
 import { useFlowStore } from '@/stores/useFlowStore'
 import { useNodeDrawer } from '@/composables/useNodeDrawer'
+import { useCreateNodeModal } from '@/composables/useCreateNodeModal'
 import { useFlowQuery } from '@/composables/useFlowQuery'
 
 const flowStore = useFlowStore()
 const nodeDrawer = useNodeDrawer()
+const createNodeModal = useCreateNodeModal()
 const nodeTypes = { flowNode: markRaw(FlowNodeRenderer), addNodePlaceholder: markRaw(AddNodePlaceholder) }
 const edgeTypes = { customEdge: markRaw(FlowAddEdge) }
 
 const { fitView, findNode, getEdges, getSelectedNodes, addSelectedElements, removeSelectedElements, viewport, setCenter } = useVueFlow()
 
 const { isLoading } = useFlowQuery()
+
+const canvasContainer = useTemplateRef<HTMLElement>('canvasContainer')
 
 const canvasNodes = computed(() => [...flowStore.vueFlowNodes, ...flowStore.addNodePlaceholders.nodes])
 const canvasEdges = computed(() => [...flowStore.vueFlowEdges, ...flowStore.addNodePlaceholders.edges])
@@ -42,9 +46,24 @@ function openNodeDrawer(data: FlowNode | undefined, options: { focus?: boolean }
   return true
 }
 
-function handleNodeClick({ node }: NodeMouseEvent) {
+// The node a mouse click opened the drawer for. It's panned into view only
+// after the drawer's layout change (and the fitView that follows) settles.
+let pendingPanTarget: HTMLElement | null = null
+
+function panToPendingTarget() {
+  const element = pendingPanTarget
+  pendingPanTarget = null
+  const container = canvasContainer.value
+  if (element?.isConnected && container) panIntoView(element, container)
+}
+
+function handleNodeClick({ node, event }: NodeMouseEvent) {
   keyboardOpener = null
-  openNodeDrawer(node.data as FlowNode | undefined)
+  const wasOpen = nodeDrawer.isOpen.value
+  if (!openNodeDrawer(node.data as FlowNode | undefined)) return
+  pendingPanTarget = event.target instanceof Element ? event.target.closest<HTMLElement>('.vue-flow__node') : null
+  // Switching nodes in an already-open drawer changes no layout, so pan now.
+  if (wasOpen) panToPendingTarget()
 }
 
 function handlePaneClick() {
@@ -92,11 +111,40 @@ function isCanvasFocusTarget(target: EventTarget | null): target is HTMLElement 
   return target instanceof HTMLElement && (target.classList.contains('vue-flow__node') || !!target.closest('.vue-flow__edge-labels'))
 }
 
-// Tabbing to a node or edge "+" button outside the visible area pans the
-// viewport to it, as panning (not scrolling) is how the canvas moves.
+const reducedMotion = usePreferredReducedMotion()
+
+const PAN_DURATION = 600
+
+// Ease-out cubic: moves off quickly and settles gently on the target.
+function easeOutCubic(t: number): number {
+  return 1 - (1 - t) ** 3
+}
+
+// Pans (the canvas never scrolls) to center an element that's outside the
+// visible area, keeping the current zoom.
+function panIntoView(element: HTMLElement, container: HTMLElement) {
+  const bounds = container.getBoundingClientRect()
+  const rect = element.getBoundingClientRect()
+  const isVisible = rect.left >= bounds.left && rect.right <= bounds.right && rect.top >= bounds.top && rect.bottom <= bounds.bottom
+  if (isVisible) return
+
+  const { x, y, zoom } = viewport.value
+  const centerX = (rect.left + rect.width / 2 - bounds.left - x) / zoom
+  const centerY = (rect.top + rect.height / 2 - bounds.top - y) / zoom
+  setCenter(centerX, centerY, { zoom, duration: reducedMotion.value === 'reduce' ? 0 : PAN_DURATION, ease: easeOutCubic })
+}
+
+// Pressing on a node focuses it too; panning then would slide the node out
+// from under the pointer before release and swallow the click. Mouse clicks
+// pan via handleNodeClick instead, after the drawer has opened.
+let pointerFocus = false
+useEventListener(window, 'pointerdown', () => (pointerFocus = true), { capture: true })
+useEventListener(window, 'keydown', () => (pointerFocus = false), { capture: true })
+
+// Tabbing to a node or edge "+" button outside the visible area pans to it.
 function handleCanvasFocusin(event: FocusEvent) {
   const container = event.currentTarget
-  if (!isCanvasFocusTarget(event.target) || !(container instanceof HTMLElement)) return
+  if (pointerFocus || !isCanvasFocusTarget(event.target) || !(container instanceof HTMLElement)) return
 
   // The browser may have natively scrolled an overflow-hidden ancestor to
   // reveal the focused element, which would offset the whole canvas.
@@ -105,16 +153,18 @@ function handleCanvasFocusin(event: FocusEvent) {
     element.scrollLeft = 0
   }
 
-  const bounds = container.getBoundingClientRect()
-  const rect = event.target.getBoundingClientRect()
-  const isVisible = rect.left >= bounds.left && rect.right <= bounds.right && rect.top >= bounds.top && rect.bottom <= bounds.bottom
-  if (isVisible) return
-
-  const { x, y, zoom } = viewport.value
-  const centerX = (rect.left + rect.width / 2 - bounds.left - x) / zoom
-  const centerY = (rect.top + rect.height / 2 - bounds.top - y) / zoom
-  setCenter(centerX, centerY, { zoom, duration: 200 })
+  panIntoView(event.target, container)
 }
+
+// A newly created node can land off-screen (e.g. a new trigger to the right
+// of everything), so pan to it once Vue Flow has rendered it.
+watch(createNodeModal.createdNodeId, async (nodeId) => {
+  if (nodeId === null) return
+  await nextTick()
+  const container = canvasContainer.value
+  const element = container?.querySelector<HTMLElement>(`.vue-flow__node[data-id="${nodeId}"]`)
+  if (container && element) panIntoView(element, container)
+})
 
 const ARROW_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']
 
@@ -155,7 +205,8 @@ watch(
     clearTimeout(fitViewTimeout)
     fitViewTimeout = setTimeout(async () => {
       await nextTick()
-      fitView({ duration: 200 })
+      await fitView({ duration: 200 })
+      panToPendingTarget()
     }, 100)
   },
 )
@@ -185,7 +236,13 @@ watch(
     :class="!nodeDrawer.isResizing.value && 'transition-[grid-template-columns] duration-200 ease-out'"
     :style="{ gridTemplateColumns: `1fr ${nodeDrawer.isOpen.value ? nodeDrawer.width.value : 0}px` }"
   >
-    <div class="relative h-full min-w-0 overflow-hidden" @keydown="handleCanvasKeydown" @keyup="handleCanvasKeyup" @focusin="handleCanvasFocusin">
+    <div
+      ref="canvasContainer"
+      class="relative h-full min-w-0 overflow-hidden"
+      @keydown="handleCanvasKeydown"
+      @keyup="handleCanvasKeyup"
+      @focusin="handleCanvasFocusin"
+    >
       <div v-if="isLoading" class="absolute inset-0 z-20 flex items-center justify-center bg-white/80 text-sm text-gray-500">
         Loading flow…
       </div>

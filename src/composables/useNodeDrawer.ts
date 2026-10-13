@@ -9,6 +9,9 @@ const isOpen = ref(false)
 const selectedNodeId = ref<NodeId | null>(null)
 const width = ref(DRAWER_DEFAULT_WIDTH)
 const isResizing = ref(false)
+// Bumped when an open should move focus into the drawer (keyboard opens);
+// NodeDrawer watches it. A counter so reopening the same node still fires.
+const focusRequest = ref(0)
 
 /**
  * Module-level shared state, same pattern as useCreateNodeModal: the drawer
@@ -17,9 +20,10 @@ const isResizing = ref(false)
  * CanvasView needs it to size the grid column the drawer lives in.
  */
 export function useNodeDrawer() {
-  function open(nodeId: NodeId) {
+  function open(nodeId: NodeId, options: { focus?: boolean } = {}) {
     selectedNodeId.value = nodeId
     isOpen.value = true
+    if (options.focus) focusRequest.value++
   }
 
   function close() {
@@ -35,5 +39,5 @@ export function useNodeDrawer() {
     isResizing.value = next
   }
 
-  return { isOpen, selectedNodeId, width, isResizing, open, close, setWidth, setResizing }
+  return { isOpen, selectedNodeId, width, isResizing, focusRequest, open, close, setWidth, setResizing }
 }

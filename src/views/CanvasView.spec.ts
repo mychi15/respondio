@@ -4,6 +4,7 @@ import { VueFlow } from '@vue-flow/core'
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { useCreateNodeModal } from '@/composables/useCreateNodeModal'
 import { useNodeDrawer } from '@/composables/useNodeDrawer'
 import { useFlowStore } from '@/stores/useFlowStore'
 import { getNodeHeight, getNodeWidth } from '@/utils/flowLayout'
@@ -247,6 +248,45 @@ describe('CanvasView', () => {
     wrapper.unmount()
   })
 
+  it('does not pan when a partly off-screen node is focused by a pointer press', async () => {
+    const wrapper = await mountWithRenderedNodes()
+    const sendMessageNode = mockFlowNodes.find((node) => node.type === 'sendMessage')!
+    const nodeElement = findNodeElement(wrapper, sendMessageNode.id).element
+    stubRect(wrapper.find('.vue-flow').element.parentElement!, { left: 0, top: 0, width: 800, height: 600 })
+    stubRect(nodeElement, { left: 700, top: 100, width: 280, height: 100 })
+    const before = getTransform(wrapper)
+
+    nodeElement.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+    nodeElement.focus()
+    await new Promise((resolve) => setTimeout(resolve, 300))
+
+    expect(getTransform(wrapper)).toBe(before)
+
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab' }))
+    nodeElement.blur()
+    nodeElement.focus()
+    await vi.waitFor(() => expect(getTransform(wrapper)).not.toBe(before))
+    wrapper.unmount()
+  })
+
+  it('opens the drawer and then pans to a partly off-screen node clicked with the mouse', async () => {
+    const wrapper = await mountWithRenderedNodes()
+    const [first, second] = mockFlowNodes.filter((node) => node.type === 'sendMessage' || node.type === 'addComment')
+    useNodeDrawer().open(first.id)
+    await flushPromises()
+    const nodeElement = findNodeElement(wrapper, second.id).element
+    stubRect(wrapper.find('.vue-flow').element.parentElement!, { left: 0, top: 0, width: 800, height: 600 })
+    stubRect(nodeElement, { left: 700, top: 100, width: 280, height: 100 })
+    const before = getTransform(wrapper)
+
+    nodeElement.dispatchEvent(new Event('pointerdown', { bubbles: true }))
+    nodeElement.click()
+
+    expect(useNodeDrawer().selectedNodeId.value).toBe(second.id)
+    await vi.waitFor(() => expect(getTransform(wrapper)).not.toBe(before))
+    wrapper.unmount()
+  })
+
   it('does not pan when the focused node is already visible', async () => {
     const wrapper = await mountWithRenderedNodes()
     const sendMessageNode = mockFlowNodes.find((node) => node.type === 'sendMessage')!
@@ -259,6 +299,26 @@ describe('CanvasView', () => {
     await new Promise((resolve) => setTimeout(resolve, 300))
 
     expect(getTransform(wrapper)).toBe(before)
+    wrapper.unmount()
+  })
+
+  it('pans the viewport to a newly created node that lands off-screen', async () => {
+    const wrapper = await mountWithRenderedNodes()
+    const store = useFlowStore()
+    const parent = store.nodes.find((node) => node.type === 'addComment')!
+    const created = store.createNode({ name: 'New', type: 'sendMessage' }, { mode: 'add', parentId: parent.id })
+    const containerRect = { left: 0, top: 0, width: 800, height: 600 }
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+      const offScreen = this instanceof HTMLElement && this.dataset.id === String(created.id)
+      const rect = offScreen ? { left: 1200, top: 900, width: 280, height: 100 } : containerRect
+      return { ...rect, x: rect.left, y: rect.top, right: rect.left + rect.width, bottom: rect.top + rect.height, toJSON() {} } as DOMRect
+    })
+    const before = getTransform(wrapper)
+
+    useCreateNodeModal().markCreated(created.id)
+
+    await vi.waitFor(() => expect(getTransform(wrapper)).not.toBe(before))
+    vi.restoreAllMocks()
     wrapper.unmount()
   })
 

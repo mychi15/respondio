@@ -30,7 +30,8 @@ function handleSubmit(input: { name?: string; description?: string; type: Creata
     attachment = { mode: 'add', parentId: input.parentId }
   }
 
-  flowStore.createNode({ name: input.name, description: input.description, type: input.type }, attachment)
+  const created = flowStore.createNode({ name: input.name, description: input.description, type: input.type }, attachment)
+  createNodeModal.markCreated(created.id)
   createNodeModal.close()
 }
 </script>

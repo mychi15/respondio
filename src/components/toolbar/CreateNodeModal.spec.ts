@@ -63,6 +63,7 @@ describe('CreateNodeModal', () => {
 
     expect(store.nodes).toHaveLength(before + 1)
     expect(store.nodes.at(-1)?.parentId).toBe(-1)
+    expect(useCreateNodeModal().createdNodeId.value).toBe(store.nodes.at(-1)?.id)
     expect(useCreateNodeModal().isOpen.value).toBe(false)
   })
 

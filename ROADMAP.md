@@ -163,9 +163,9 @@ type FlowNode =
 - [x] Playwright E2E golden path driven against the Blob-hosted mock schema: load flow → create node → edit title/description → upload attachment → edit type-specific fields → delete (cascade) → verify canvas + drawer state + updated Blob JSON
 
 ### M6 — Polish & Hardening
-- [ ] Canvas UX: pan/zoom defaults, minimap/controls (Vue Flow built-ins) as needed
-- [ ] Accessibility pass on drawer (focus trap, `useId()` for form fields, keyboard close)
-- [ ] Empty states (no nodes yet, no attachments, no comments, no `description` on a node)
+- [x] Canvas UX: pan/zoom defaults, minimap/controls (Vue Flow built-ins) as needed
+- [x] Accessibility pass on drawer (focus trap, add 'id' for form fields, keyboard close)
+- [x] Empty states (no nodes yet, no attachments, no comments, no `description` on a node)
 - [x] CI/CD pipeline for running tests — GitHub Actions (`.github/workflows/ci.yml`): lint, typecheck, unit tests, build, then serialized Playwright e2e against the deployed API; deploys stay on Vercel Git integration
 - [x] Keyboard accessibility for selecting nodes and opening details drawer — Tab to interactive nodes (visible focus ring, `aria-label`), Enter/Space opens the drawer and focuses its heading, Escape closes it and returns focus to the node; arrow-key node moves now persist (one undo step per keyup); Vue Flow's Backspace delete disabled so deletes always go through the store
   - [x] Edge "+" quick-add buttons (`FlowAddEdge.vue`) are real `<button>`s with descriptive `aria-label`s ("Add node after …" / "Insert node between … and …"); edges themselves are no longer tab stops

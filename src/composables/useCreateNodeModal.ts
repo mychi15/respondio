@@ -7,6 +7,8 @@ export type CreateNodeInvocation =
 
 const isOpen = ref(false)
 const invocation = ref<CreateNodeInvocation | null>(null)
+// Last node created through the modal, so CanvasView can bring it into view.
+const createdNodeId = ref<NodeId | null>(null)
 
 /**
  * Module-level shared state: quick-add buttons live inside Vue Flow's
@@ -20,10 +22,14 @@ export function useCreateNodeModal() {
     isOpen.value = true
   }
 
+  function markCreated(nodeId: NodeId) {
+    createdNodeId.value = nodeId
+  }
+
   function close() {
     isOpen.value = false
     invocation.value = null
   }
 
-  return { isOpen, invocation, open, close }
+  return { isOpen, invocation, createdNodeId, open, markCreated, close }
 }

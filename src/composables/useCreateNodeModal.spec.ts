@@ -47,4 +47,12 @@ describe('useCreateNodeModal', () => {
     expect(second.isOpen.value).toBe(true)
     expect(second.invocation.value).toEqual({ source: 'toolbar' })
   })
+
+  it('markCreated records the created node id independently of close', () => {
+    const { createdNodeId, markCreated, close } = useCreateNodeModal()
+    markCreated('b6a0c1')
+    close()
+
+    expect(createdNodeId.value).toBe('b6a0c1')
+  })
 })
