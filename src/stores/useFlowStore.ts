@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import type { BusinessHoursNode, CreatableNodeType, FlowNode, NodeId, SendMessagePayloadItem } from '@/types/flow'
+import type { BusinessHoursNode, ConnectorNode, CreatableNodeType, FlowNode, NodeId, SendMessagePayloadItem } from '@/types/flow'
 import { buildAddNodePlaceholders, buildEdgesFromNodes, toVueFlowNodes } from '@/utils/flowGraph'
 import { computeNodePositions } from '@/utils/flowLayout'
 import { generateNodeId } from '@/utils/helpers'
@@ -58,6 +58,21 @@ export const useFlowStore = defineStore('flow', () => {
     }
 
     nodes.value.push(newNode)
+
+    if (newNode.type === 'dateTime') {
+      existingIds.add(newNode.id)
+      const successId = generateNodeId(existingIds)
+      existingIds.add(successId)
+      const failureId = generateNodeId(existingIds)
+
+      const connectors: ConnectorNode[] = [
+        { id: successId, parentId: newNode.id, type: 'dateTimeConnector', data: { connectorType: 'success' } },
+        { id: failureId, parentId: newNode.id, type: 'dateTimeConnector', data: { connectorType: 'failure' } },
+      ]
+      nodes.value.push(...connectors)
+      newNode.data.connectors = [successId, failureId]
+    }
+
     return newNode
   }
 

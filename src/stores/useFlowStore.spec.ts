@@ -70,11 +70,33 @@ describe('useFlowStore', () => {
   it.each([
     ['sendMessage', { payload: [] }],
     ['addComment', { comment: '' }],
-    ['dateTime', { times: [], connectors: [], timezone: 'UTC', action: 'businessHours' }],
   ] as const)('createNode fills in the default data shape for type "%s"', (type, expectedData) => {
     const store = useFlowStore()
     const created = store.createNode({ name: 'New Node', type }, { mode: 'add', parentId: 1 })
     expect(created.data).toEqual(expectedData)
+  })
+
+  it('createNode for type "dateTime" auto-creates success/failure connector children', () => {
+    const store = useFlowStore()
+    const before = store.nodes.length
+    const created = store.createNode({ name: 'New Node', type: 'dateTime' }, { mode: 'add', parentId: 1 })
+
+    expect(store.nodes).toHaveLength(before + 3)
+
+    const connectors = store.nodes.filter((node) => node.parentId === created.id)
+    expect(connectors).toHaveLength(2)
+    expect(connectors.map((node) => node.type)).toEqual(['dateTimeConnector', 'dateTimeConnector'])
+    expect(connectors.map((node) => (node as { data: { connectorType: string } }).data.connectorType)).toEqual([
+      'success',
+      'failure',
+    ])
+
+    expect(created.data).toEqual({
+      times: [],
+      timezone: 'UTC',
+      action: 'businessHours',
+      connectors: connectors.map((node) => node.id),
+    })
   })
 
   it('updateNode merges the given patch into the matching node', () => {
