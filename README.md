@@ -12,7 +12,7 @@ Requires [pnpm](https://pnpm.io/).
 pnpm install
 ```
 
-No `.env.local` is required to get started: `API_BASE_URL` ([src/api/flowApi.ts](src/api/flowApi.ts)) defaults to the deployed instance of this app, so the local frontend talks to it out of the box. `api/flow.ts` and `api/upload.ts` are Vercel Serverless Functions backed by Upstash Redis (flow data) and Vercel Blob (attachments) — plain `vite` doesn't run them, which is why the default points at a deployment rather than `localhost`.
+No `.env.local` is required to get started: `API_BASE_URL` ([src/api/flowApi.ts](src/api/flowApi.ts)) defaults to the deployed instance of this app in local dev, so the local frontend talks to it out of the box. Deployed builds default to `''` instead, so each deployment (including previews) calls its own same-origin `/api`. `api/flow.ts` and `api/upload.ts` are Vercel Serverless Functions backed by Upstash Redis (flow data) and Vercel Blob (attachments) — plain `vite` doesn't run them, which is why the default points at a deployment rather than `localhost`.
 
 Only set `VITE_API_BASE_URL` in `.env.local` if you need to override that default — e.g. to run the API functions locally yourself (see [Running the project](#running-the-project)), which needs its own `KV_REST_API_URL`/`KV_REST_API_TOKEN` (or `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN`) for flow data and `BLOB_READ_WRITE_TOKEN` for uploads.
 
