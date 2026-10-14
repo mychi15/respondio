@@ -68,6 +68,10 @@ export const useFlowStore = defineStore('flow', () => {
   // structuredClone can't clone. The flow is plain JSON data anyway.
   const history = useManualRefHistory(nodes, { clone: (value) => JSON.parse(JSON.stringify(value)), capacity: 50 })
 
+  // The flow as the server last confirmed it (loaded, or saved successfully).
+  // Kept as a string and compared only on demand, not on every edit.
+  let lastSavedJson = '[]'
+
   // Query owns the server copy of the flow; this store owns the editable
   // working copy (and its undo history). Every save goes through this mutation,
   // which writes the flow back and keeps the ['flow'] cache in step with it.
@@ -78,7 +82,10 @@ export const useFlowStore = defineStore('flow', () => {
       mutationKey: [...FLOW_QUERY_KEY, 'save'],
       scope: { id: 'flow-save' },
       mutationFn: saveFlow,
-      onSuccess: (_, savedNodes) => queryClient.setQueryData(FLOW_QUERY_KEY, savedNodes),
+      onSuccess: (_, savedNodes) => {
+        lastSavedJson = JSON.stringify(savedNodes)
+        queryClient.setQueryData(FLOW_QUERY_KEY, savedNodes)
+      },
       onError: () => toast.show('Failed to save changes. Please try again.', 'error'),
     },
     queryClient,
@@ -103,6 +110,12 @@ export const useFlowStore = defineStore('flow', () => {
     return save()
   }
 
+  // True while the working copy differs from what the server has if saves are enabled.
+  // Sample data is always considered "unsaved" because it can't be saved.
+  function hasUnsavedChanges(): boolean {
+    return !isSampleData.value && JSON.stringify(nodes.value) !== lastSavedJson
+  }
+
   function undo(): void {
     if (!history.canUndo.value) return
     history.undo()
@@ -121,6 +134,7 @@ export const useFlowStore = defineStore('flow', () => {
     const cloned = structuredClone(toRaw(next))
     fillMissingPositions(cloned)
     nodes.value = cloned
+    lastSavedJson = JSON.stringify(cloned)
     isSampleData.value = false
     // The loaded flow becomes the history baseline.
     history.commit()
@@ -275,6 +289,7 @@ export const useFlowStore = defineStore('flow', () => {
     moveNodes,
     autoAlign,
     persist,
+    hasUnsavedChanges,
     undo,
     redo,
     canUndo: history.canUndo,

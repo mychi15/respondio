@@ -414,6 +414,46 @@ describe('useFlowStore saving through the Query mutation', () => {
     expect(saveFlow).toHaveBeenCalledTimes(2)
     expect(queryClient.getQueryData<typeof mockFlowNodes>(FLOW_QUERY_KEY)?.find((node) => node.id === mockFlowNodes[1].id)?.name).toBe('Kept')
   })
+
+  it('has no unsaved changes right after the flow loads', () => {
+    expect(loadedStore().hasUnsavedChanges()).toBe(false)
+  })
+
+  it('has unsaved changes while a save is running, and none once it succeeds', async () => {
+    let finishSave!: () => void
+    vi.mocked(saveFlow).mockImplementationOnce(() => new Promise<void>((resolve) => (finishSave = resolve)))
+    const store = loadedStore()
+
+    store.updateNode(mockFlowNodes[1].id, { name: 'Renamed' })
+    const saving = store.persist()
+    expect(store.hasUnsavedChanges()).toBe(true)
+
+    await vi.waitFor(() => expect(saveFlow).toHaveBeenCalledTimes(1))
+    finishSave()
+    await saving
+    expect(store.hasUnsavedChanges()).toBe(false)
+  })
+
+  it('keeps unsaved changes after a failed save until a later save succeeds', async () => {
+    vi.mocked(saveFlow).mockRejectedValueOnce(new Error('Failed to save flow (500)'))
+    const store = loadedStore()
+
+    store.updateNode(mockFlowNodes[1].id, { name: 'Renamed' })
+    await store.persist().catch(() => {})
+    expect(store.hasUnsavedChanges()).toBe(true)
+
+    store.updateNode(mockFlowNodes[2].id, { name: 'Also renamed' })
+    await store.persist()
+    expect(store.hasUnsavedChanges()).toBe(false)
+  })
+
+  it('never reports unsaved changes for the sample flow, which is not saved', () => {
+    const store = useFlowStore()
+    store.loadSampleFlow(mockFlowNodes)
+    store.updateNode(mockFlowNodes[1].id, { name: 'Renamed' })
+
+    expect(store.hasUnsavedChanges()).toBe(false)
+  })
 })
 
 describe('useFlowStore with the sample flow loaded', () => {

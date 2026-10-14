@@ -9,7 +9,7 @@ import { useNodeDrawer } from '@/composables/useNodeDrawer'
 import { useToast } from '@/composables/useToast'
 import { router } from '@/router'
 import { useFlowStore } from '@/stores/useFlowStore'
-import { fetchFlow } from '@/api/flowApi'
+import { fetchFlow, saveFlow } from '@/api/flowApi'
 import { getNodeHeight, getNodeWidth } from '@/utils/flowLayout'
 import CanvasView from './CanvasView.vue'
 import mockFlowNodes from '../../api/_fixtures/mockFlow'
@@ -441,5 +441,23 @@ describe('CanvasView', () => {
     await flushPromises()
 
     expect(useNodeDrawer().isOpen.value).toBe(false)
+  })
+
+  it('asks before the tab closes only while a change is unsaved', async () => {
+    mount(CanvasView, mountOptions)
+    await flushPromises()
+    const closeTab = () => {
+      const event = new Event('beforeunload', { cancelable: true })
+      window.dispatchEvent(event)
+      return event.defaultPrevented
+    }
+
+    expect(closeTab()).toBe(false)
+
+    vi.mocked(saveFlow).mockRejectedValueOnce(new Error('Failed to save flow (500)'))
+    useFlowStore().createNode({ name: 'New', type: 'addComment' }, { mode: 'add', parentId: 'a9b0c1' })
+    await flushPromises()
+
+    expect(closeTab()).toBe(true)
   })
 })

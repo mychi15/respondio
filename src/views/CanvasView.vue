@@ -202,6 +202,15 @@ useEventListener(window, 'keydown', (event: KeyboardEvent) => {
   }
 })
 
+// Saves are optimistic, so after a failed or still-running save the edits
+// exist only in this tab. Ask before closing or reloading it rather than drop
+// them silently. returnValue is the legacy way to trigger the same prompt.
+useEventListener(window, 'beforeunload', (event: BeforeUnloadEvent) => {
+  if (!flowStore.hasUnsavedChanges()) return
+  event.preventDefault()
+  event.returnValue = ''
+})
+
 // Undo/redo can remove the node the drawer is showing (e.g. undoing a create).
 watch(
   () => flowStore.nodes,
