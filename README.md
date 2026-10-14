@@ -228,8 +228,6 @@ Instructions alone don't guarantee anything, so the important rules are also enf
 
 ### Human ownership
 
-The agent writes code; I decide what goes in, and I understand what's there.
-
 - **Scope and design come first.** [ROADMAP.md](ROADMAP.md) was written before the code: milestones, the data model, and open questions (deletion behaviour, ID format, where attachments live), each settled by me before work on it started. The [design decisions](#design-decisions) above record the reasoning behind each choice, including where an initial plan changed.
 - **Small, directed tasks.** The agent gets one well-scoped change at a time (a feature, a refactor, a file move) rather than open-ended goals, so each change is small enough to review properly.
 - **Nothing unread is accepted.** I review every diff in the working tree before it's committed. When generated code is ambiguous, I push back or rewrite it if the explanation doesn't hold up.
