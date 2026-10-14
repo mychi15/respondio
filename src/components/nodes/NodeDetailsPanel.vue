@@ -11,9 +11,9 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import FieldMessage from '@/components/forms/FieldMessage.vue'
-import BusinessHoursFields from './BusinessHoursFields.vue'
-import SendMessageFields from './SendMessageFields.vue'
-import AddCommentFields from './AddCommentFields.vue'
+import BusinessHoursFields from '@/components/forms/BusinessHoursFields.vue'
+import SendMessageFields from '@/components/forms/SendMessageFields.vue'
+import AddCommentFields from '@/components/forms/AddCommentFields.vue'
 
 const props = defineProps<{ nodeId: NodeId }>()
 

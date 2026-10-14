@@ -13,9 +13,9 @@ See [ROADMAP.md](ROADMAP.md) for the full milestone history and the original sco
 | Canvas of nodes, each showing an icon, title and truncated description | [FlowNodeRenderer.vue](src/components/nodes/FlowNodeRenderer.vue) |
 | Create a node (title, description, type, parent) | "Create New Node" → [CreateNodeForm.vue](src/components/toolbar/CreateNodeForm.vue) |
 | Update a node's title and description in a details drawer | [NodeDrawer.vue](src/components/nodes/NodeDrawer.vue), [NodeDetailsPanel.vue](src/components/nodes/NodeDetailsPanel.vue) |
-| Send Message: message text and attachments | [SendMessageFields.vue](src/components/nodes/SendMessageFields.vue) |
-| Add Comment: comment text | [AddCommentFields.vue](src/components/nodes/AddCommentFields.vue) |
-| Business Hours: timezone and per-day time ranges | [BusinessHoursFields.vue](src/components/nodes/BusinessHoursFields.vue) |
+| Send Message: message text and attachments | [SendMessageFields.vue](src/components/forms/SendMessageFields.vue) |
+| Add Comment: comment text | [AddCommentFields.vue](src/components/forms/AddCommentFields.vue) |
+| Business Hours: timezone and per-day time ranges | [BusinessHoursFields.vue](src/components/forms/BusinessHoursFields.vue) |
 | Details drawer reachable by a URL containing the node ID | `/node/:nodeId` ([router](src/router/index.ts), [useNodeDrawer](src/composables/useNodeDrawer.ts)) |
 | TanStack Query for fetching and mutations on the JSON payload | [useFlowQuery](src/composables/useFlowQuery.ts) (`useQuery`), [useFlowStore](src/stores/useFlowStore.ts) (`useMutation`) |
 | Vue Router and Pinia | [src/router](src/router/index.ts), [src/stores](src/stores/useFlowStore.ts) |
