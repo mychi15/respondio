@@ -28,7 +28,7 @@ See [ROADMAP.md](ROADMAP.md) for the full milestone history and the original sco
   - Title is required, up to 100 characters.
   - Description is optional; it, the message text and the comment are each capped at 1,000 characters.
   - Each business-hours row needs a start and end time, with the start before the end, and may not overlap an earlier row on the same day. Back-to-back ranges (09:00–12:00, 12:00–17:00) are allowed.
-  - Attachments must be PNG, JPEG, GIF, WebP, SVG or PDF, up to 10 MB each. The browser checks this before uploading, and the upload endpoint enforces the same rules ([nodeFormValidation.ts](src/utils/nodeFormValidation.ts)).
+  - Attachments must be PNG, JPEG, GIF, WebP, SVG or PDF, up to 10 MB each. The browser checks this before uploading, so users get a clear reason. The same rules ([nodeFormValidation.ts](src/utils/nodeFormValidation.ts)) are written into the signed upload token, and Vercel Blob rejects any upload that breaks them, even one that skips the browser check.
 
 ### Nice-to-haves
 
@@ -80,7 +80,7 @@ To run the API locally instead, set `VITE_API_BASE_URL` in `.env.local` and prov
    Each node persists its own `position`, so manual drags survive reloads. The tree layout (`flowLayout.ts`) only runs to backfill nodes missing a position on load, and when the user clicks Auto-align, which overwrites every position. New nodes are placed under their parent, and inserting one pushes the target's subtree down to make room.
 
 3. **Query owns the server copy; Pinia owns the working copy.** 
-   TanStack Query holds what the server has: `useQuery(['flow'])` loads it and a single save `useMutation` writes it back, updating the `['flow']` cache on success. The Pinia store holds the editable working copy plus its undo history, so edits apply instantly (optimistic, no rollback) and a failed save shows a toast rather than reverting the canvas. The store seeds from the query once, on first load; after that the working copy leads, and re-seeding on every cache update would wipe undo history and could overwrite edits made while a save was in flight. One mutation saving the whole flow, rather than one per action (create/update/delete), matches the API, which only accepts the full flow.
+   `useQuery(['flow'])` loads the server copy. One save `useMutation` writes the whole flow back and updates the `['flow']` cache on success; there's no per-action (create/update/delete) mutation because the API only accepts the full flow. Pinia holds the working copy and its undo history. It seeds from the query once, on first load, and leads after that: re-seeding on every cache update would wipe undo history and could overwrite edits made during an in-flight save. Edits apply instantly (optimistic, no rollback). A failed save shows a toast and leaves the canvas as is, and the next successful save writes those edits too, since every save sends the whole flow. While a save has failed or is still running, the edits exist only in the tab, so closing or reloading it brings up the browser's "Leave site?" prompt.
 
 4. **Saves run in order, not raced.** 
    The save mutation has a Query `scope`, so Query runs saves one at a time in call order, and each sends a snapshot of the flow taken when it was made. A rapid second edit can't have its request land before (and get overwritten by) a slower first one.
@@ -101,7 +101,7 @@ To run the API locally instead, set `VITE_API_BASE_URL` in `.env.local` and prov
    Flow data started out in Blob too, but every overwrite took ~1–1.5s (a full file rewrite plus CDN cache purge) and reads right after a write could return stale or broken content. A single Redis key per flow (one JSON value per deployment/test-key, in the same region as the functions) makes saves take milliseconds and reads immediately consistent. Blob is still the right fit for attachments: write-once static files served from a CDN.
 
 10. **Client-upload token endpoint instead of a server-side proxy.** 
-    `/api/upload` hands the browser a signed Blob upload token rather than streaming the file through the serverless function body, sidestepping the platform's request-body size limit entirely.
+    The file never passes through our serverless function, so the function's request-body size limit doesn't apply. `/api/upload` only returns a signed upload token, and the browser uses it to upload the file straight to Vercel Blob. The endpoint still controls what gets stored: the token carries the allowed file types and size limit, and Blob enforces them.
 
 11. **`description` added to the schema as optional.** 
     The original sample payload had no description field; it was added to satisfy a title+description+type requirement per node, kept optional (not required) so empty-description rendering stays exercised, not just the populated case.
@@ -191,3 +191,46 @@ pnpm lint && pnpm typecheck && pnpm test
 - **`e2e`** — `pnpm test:e2e` (after `checks` passes), with `VITE_API_BASE_URL` pointed at the deployed instance. Runs are serialized across branches because they all reset and mutate the same shared test flow key. On failure, the Playwright report and traces are uploaded as a `playwright-report` artifact.
 
 Deploys are handled separately by Vercel's Git integration. CI doesn't verify `api/` function behaviour — e2e exercises the frontend against the already-deployed API.
+
+## How AI is used
+
+- **[AGENTS.md](AGENTS.md)** sets the project's coding standards:
+  - Composition API with `<script setup>` only
+  - Vue 3.5 idioms (`defineModel`, `useTemplateRef`, `useId`)
+  - Tailwind styling rules
+  - where shared logic goes (composables in `composables/`, pure functions in `utils/`)
+  - testing requirements: every new composable, utility and non-trivial component gets a co-located spec, and bug fixes get a regression test
+  - the `pnpm`-only verification workflow
+- **[.claude/CLAUDE.md](.claude/CLAUDE.md)** holds project instructions for Claude Code. It tells the agent to look code up through CodeGraph (below) before falling back to grep or reading whole files.
+
+### Skills
+
+[Skills](.claude/skills/) are instruction sets the agent loads for matching tasks:
+
+- **[code-checker](.claude/skills/code-checker/SKILL.md):** after editing `.vue`/`.ts`/`.js` files, the agent must run `pnpm lint` and `pnpm typecheck` and report the real result. It must not judge by reading the diff. On a failure, it fixes the cause rather than adding `eslint-disable` or widening types to `any`.
+- **[vue-best-practices](.claude/skills/vue-best-practices/SKILL.md)** and **[vue-pinia-best-practices](.claude/skills/vue-pinia-best-practices/SKILL.md):** reference guides from [vuejs-ai/skills](https://github.com/vuejs-ai/skills) covering reactivity, component data flow, fallthrough attributes, slots and Pinia store patterns. They're pinned by content hash in [skills-lock.json](skills-lock.json), so an upstream change can't silently alter them.
+
+### Code navigation
+
+- **CodeGraph**, configured in [.mcp.json](.mcp.json), is an MCP server that indexes the codebase into a symbol and call graph. The agent gets a symbol's source along with its callers and dependents in one lookup, so it sees what a change affects before editing.
+- [.claude/settings.json](.claude/settings.json) allows the CodeGraph tools and adds a `UserPromptSubmit` hook that attaches relevant code context to every prompt.
+- The index itself is local to each machine and not committed ([.codegraph/.gitignore](.codegraph/.gitignore)).
+
+### Enforcement
+
+Instructions alone don't guarantee anything, so the important rules are also enforced by tools:
+
+- **ESLint** ([eslint.config.js](eslint.config.js)) turns two of the `AGENTS.md` rules into errors: `vue/component-api-style` (`<script setup>` only) and `vue/block-order` (script, template, style).
+- **Type checking:** `vue-tsc` runs in strict mode.
+- **Tests:** Vitest unit and component tests, plus the Playwright golden path (see [Running tests](#running-tests)).
+- **[CI](#ci)** runs all of these on every pull request and push to `master`, so nothing merges on the agent's word alone.
+
+### Human ownership
+
+The agent writes code; I decide what goes in, and I understand what's there.
+
+- **Scope and design come first.** [ROADMAP.md](ROADMAP.md) was written before the code: milestones, the data model, and open questions (deletion behaviour, ID format, where attachments live), each settled by me before work on it started. The [design decisions](#design-decisions) above record the reasoning behind each choice, including where an initial plan changed.
+- **Small, directed tasks.** The agent gets one well-scoped change at a time (a feature, a refactor, a file move) rather than open-ended goals, so each change is small enough to review properly.
+- **Nothing is accepted unread.** I review every diff in the working tree before it's committed. When generated code ambiguous, I push back or rewrite it if the explanation doesn't hold up.
+- **I commit, not the agent.** Every commit is authored by me, in small [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `refactor:`, `test:`, `docs:`), so the history reads as a series of decisions I made.
+- **Docs follow the code.** After a structural change, I have the README and ROADMAP checked for anything now out of date, so the docs keep describing the code as it is.

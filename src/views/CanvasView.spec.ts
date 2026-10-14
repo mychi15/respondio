@@ -135,6 +135,34 @@ describe('CanvasView', () => {
     expect(useNodeDrawer().selectedNodeId.value).toBeNull()
   })
 
+  it('closes the node drawer when the node it is showing is clicked again', async () => {
+    const wrapper = mount(CanvasView, mountOptions)
+    const vueFlow = wrapper.findComponent(VueFlow)
+    const sendMessageNode = mockFlowNodes.find((node) => node.type === 'sendMessage')!
+
+    emitNodeClick(vueFlow, sendMessageNode)
+    await flushPromises()
+    emitNodeClick(vueFlow, sendMessageNode)
+    await flushPromises()
+
+    expect(useNodeDrawer().isOpen.value).toBe(false)
+    expect(router.currentRoute.value.path).toBe('/')
+  })
+
+  it('switches the node drawer to a different node when another node is clicked', async () => {
+    const wrapper = mount(CanvasView, mountOptions)
+    const vueFlow = wrapper.findComponent(VueFlow)
+    const sendMessageNode = mockFlowNodes.find((node) => node.type === 'sendMessage')!
+    const addCommentNode = mockFlowNodes.find((node) => node.type === 'addComment')!
+
+    emitNodeClick(vueFlow, sendMessageNode)
+    await flushPromises()
+    emitNodeClick(vueFlow, addCommentNode)
+    await flushPromises()
+
+    expect(useNodeDrawer().selectedNodeId.value).toBe(String(addCommentNode.id))
+  })
+
   it('stores the dragged node center when a drag stops', async () => {
     const wrapper = mount(CanvasView, mountOptions)
     const store = useFlowStore()

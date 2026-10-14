@@ -138,7 +138,7 @@ type FlowNode =
 ### M4 — Node-Type-Specific Drawer Content
 - [x] **Send Message**
   - [x] Attachments section: existing attachments (`payload[].attachment` URLs) shown as tile/box previews
-  - [x] Upload new attachment: file input → `/api/upload` issues a Vercel Blob client-upload token → browser uploads straight to Blob → CDN URL appended as `{ type: 'attachment', attachment: cdnUrl }` to `payload` and persisted on save. File type and size rules live in `src/utils/nodeFormValidation.ts`, checked in the browser first and enforced by the token endpoint
+  - [x] Upload new attachment: file input → `/api/upload` issues a Vercel Blob client-upload token → browser uploads straight to Blob → CDN URL appended as `{ type: 'attachment', attachment: cdnUrl }` to `payload` and persisted on save. File type and size rules live in `src/utils/nodeFormValidation.ts`, checked in the browser first, then written into the upload token, which Blob enforces
   - [x] Remove attachment from list (removes the payload item; orphaned blob cleanup out of MVP scope)
   - [x] Message text: input field showing existing text(s), allow update/remove
 - [x] **Add Comments**

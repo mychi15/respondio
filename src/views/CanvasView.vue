@@ -70,9 +70,15 @@ function panToPendingTarget() {
 function handleNodeClick({ node, event }: NodeMouseEvent) {
   focusOpener = null
   const wasOpen = nodeDrawer.isOpen.value
+  const data = node.data as FlowNode | undefined
+  
+  if (wasOpen && data && String(data.id) === String(nodeDrawer.selectedNodeId.value)) {
+    nodeDrawer.close()
+    return
+  }
   // Full-screen, the clicked node goes inert, so focus has to move into the drawer.
   const focus = nodeDrawer.isOverlay.value
-  if (!openNodeDrawer(node.data as FlowNode | undefined, { focus })) return
+  if (!openNodeDrawer(data, { focus })) return
   const nodeElement = event.target instanceof Element ? event.target.closest<HTMLElement>('.vue-flow__node') : null
   if (focus) focusOpener = nodeElement
   pendingPanTarget = nodeElement
