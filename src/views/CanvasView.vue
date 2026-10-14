@@ -71,7 +71,7 @@ function handleNodeClick({ node, event }: NodeMouseEvent) {
   focusOpener = null
   const wasOpen = nodeDrawer.isOpen.value
   const data = node.data as FlowNode | undefined
-  
+
   if (wasOpen && data && String(data.id) === String(nodeDrawer.selectedNodeId.value)) {
     nodeDrawer.close()
     return
