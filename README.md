@@ -1,8 +1,50 @@
 # Flow Chart Builder
 
-A canvas-based editor for building messaging/automation flows: drag out a tree of nodes (triggers, messages, comments, business-hours branches), edit each one in a details drawer, and have every change persisted automatically. Built with Vue 3 + Vue Flow, backed by Vercel Serverless Functions and Vercel Blob storage.
+A canvas-based editor for building messaging/automation flows: drag out a tree of nodes (triggers, messages, comments, business-hours branches), edit each one in a details drawer, and have every change persisted automatically. Built with Vue 3, Vue Flow, Pinia, Vue Router and TanStack Query, deployed on Vercel with Serverless Functions, Upstash Redis (flow data) and Vercel Blob (attachments).
 
-See [ROADMAP.md](ROADMAP.md) for the full milestone history and the original scope decisions this was built against.
+See [ROADMAP.md](ROADMAP.md) for the full milestone history and the original scope decisions.
+
+## Features
+
+### Requirements
+
+| Requirement | Where |
+|---|---|
+| Canvas of nodes, each showing an icon, title and truncated description | [FlowNodeRenderer.vue](src/components/nodes/FlowNodeRenderer.vue) |
+| Create a node (title, description, type, parent) | "Create New Node" → [CreateNodeForm.vue](src/components/toolbar/CreateNodeForm.vue) |
+| Update a node's title and description in a details drawer | [NodeDrawer.vue](src/components/nodes/NodeDrawer.vue), [NodeDetailsPanel.vue](src/components/nodes/NodeDetailsPanel.vue) |
+| Send Message: message text and attachments | [SendMessageFields.vue](src/components/nodes/SendMessageFields.vue) |
+| Add Comment: comment text | [AddCommentFields.vue](src/components/nodes/AddCommentFields.vue) |
+| Business Hours: timezone and per-day time ranges | [BusinessHoursFields.vue](src/components/nodes/BusinessHoursFields.vue) |
+| Details drawer reachable by a URL containing the node ID | `/node/:nodeId` ([router](src/router/index.ts), [useNodeDrawer](src/composables/useNodeDrawer.ts)) |
+| TanStack Query for fetching and mutations on the JSON payload | [useFlowQuery](src/composables/useFlowQuery.ts) (`useQuery`), [useFlowStore](src/stores/useFlowStore.ts) (`useMutation`) |
+| Vue Router and Pinia | [src/router](src/router/index.ts), [src/stores](src/stores/useFlowStore.ts) |
+| Deployed on Vercel | Frontend plus [api/](api/) Serverless Functions |
+
+### Validation and rules
+
+- **Deleting a node** also deletes every node downstream of it, after a confirmation.
+- **Form validation:**
+  - Title is required.
+  - Description is optional.
+  - Each business-hours row needs a start time before its end time, and no two rows on the same day may share a start or end time.
+
+### Nice-to-haves
+
+- **Undo / redo** for every change (edits, creates, deletes, moves, auto-align): toolbar buttons, or `Ctrl/⌘+Z` to undo and `Ctrl/⌘+Shift+Z` or `Ctrl+Y` to redo. Shortcuts are ignored while typing in a field, so text undo still works there.
+- **Keyboard navigation** on the canvas:
+  - `Tab` moves between nodes and the "+" buttons; the canvas pans to whatever gets focus if it's off-screen.
+  - `Enter` or `Space` on a node opens its drawer and moves focus into it.
+  - `Escape` closes the drawer and returns focus to the node.
+  - Arrow keys move the selected node; the move is saved and undo-able.
+- **CI**: GitHub Actions runs lint, typecheck, unit tests, build and the Playwright end-to-end tests (see [CI](#ci)).
+
+### Extras
+
+- **Auto-align** re-lays out the whole tree; nodes can also be dragged, and positions are saved.
+- **Quick add**: a "+" on every connection inserts a node there, and a "+" below every last node appends one.
+- **Resizable drawer**, which becomes full-screen on narrow screens.
+- **Works without the API**: if the flow can't be loaded, the app falls back to the bundled sample flow (see [Setup](#setup)).
 
 ## Setup
 

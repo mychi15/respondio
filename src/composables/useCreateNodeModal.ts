@@ -11,7 +11,7 @@ const invocation = ref<CreateNodeInvocation | null>(null)
 const createdNodeId = ref<NodeId | null>(null)
 
 /**
- * Module-level shared state: quick-add buttons live inside Vue Flow's
+ * Singleton shared state: quick-add buttons live inside Vue Flow's
  * pan/zoom transform and must not render the modal themselves, so they
  * open it through this composable instead; the modal itself is rendered
  * once, as a sibling of <VueFlow>, in CanvasView.vue.
