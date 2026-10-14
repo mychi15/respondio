@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, nextTick, reactive, ref, useId, useTemplateRef, watch } from 'vue'
 import { X } from '@lucide/vue'
 import type { BusinessHoursNode, Weekday } from '@/types/flow'
 import { useFlowStore } from '@/stores/useFlowStore'
@@ -56,22 +56,40 @@ function save() {
   flowStore.updateBusinessHours(props.node.id, { times: times.map((row) => ({ ...row })), timezone: timezone.value })
 }
 
+const idPrefix = useId()
+const hoursLabelId = `${idPrefix}-hours-label`
+const errorId = (index: number) => `${idPrefix}-error-${index}`
+
+const root = useTemplateRef<HTMLElement>('root')
+
+// Adding or removing a row would otherwise leave keyboard focus on a button
+// that moved or no longer exists, so it's placed on the row's first control
+// (its day picker), or on "Add time" once no rows are left.
+async function focusRow(index: number) {
+  await nextTick()
+  const rows = root.value?.querySelectorAll<HTMLElement>('[data-time-row]') ?? []
+  const target = rows[Math.min(index, rows.length - 1)]?.querySelector<HTMLElement>('button, select, input')
+  ;(target ?? root.value?.querySelector<HTMLElement>('[data-add-time]'))?.focus()
+}
+
 // Starts on the first weekday without hours yet, so adding rows doesn't
 // immediately create a duplicate of an existing one.
 function addTimeRow() {
   const day = WEEKDAYS.find((candidate) => !times.some((row) => row.day === candidate)) ?? 'mon'
   times.push({ day, startTime: '09:00', endTime: '17:00' })
+  focusRow(times.length - 1)
 }
 
 function removeTimeRow(index: number) {
   times.splice(index, 1)
+  focusRow(index)
 }
 
 defineExpose({ save, isValid })
 </script>
 
 <template>
-  <div class="flex flex-col gap-4">
+  <div ref="root" class="flex flex-col gap-4">
     <div class="flex flex-col gap-1.5">
       <Label for="business-hours-timezone">Timezone</Label>
       <Combobox v-model="timezone">
@@ -92,16 +110,22 @@ defineExpose({ save, isValid })
       </Combobox>
     </div>
 
-    <div class="flex flex-col gap-1.5">
-      <Label for="times">Business hours</Label>
+    <!-- The heading names a group of controls, not one field, so it labels the
+         group via aria-labelledby rather than a <label for>. -->
+    <div role="group" :aria-labelledby="hoursLabelId" class="flex flex-col gap-1.5">
+      <Label :id="hoursLabelId" as="span">Business hours</Label>
+      <p v-if="times.length === 0" class="text-xs text-gray-500">No business hours set.</p>
       <div
         v-for="(row, index) in times"
         :key="index"
+        data-time-row
+        role="group"
+        :aria-label="`Time range ${index + 1}`"
         class="flex flex-col gap-1.5 rounded-md border border-gray-200 p-2"
       >
         <div class="flex items-center gap-1.5">
           <Select v-model="row.day">
-            <SelectTrigger size="sm" class="w-20 shrink-0">
+            <SelectTrigger size="sm" class="w-20 shrink-0" aria-label="Day">
               <SelectValue>{{ abbreviateDay(row.day) }}</SelectValue>
             </SelectTrigger>
             <SelectContent>
@@ -116,27 +140,27 @@ defineExpose({ save, isValid })
             type="time"
             aria-label="Start time"
             :aria-invalid="Boolean(rowErrors[index]) || undefined"
-            :aria-describedby="rowErrors[index] ? `business-hours-error-${index}` : undefined"
+            :aria-describedby="rowErrors[index] ? errorId(index) : undefined"
             class="h-7 min-w-[5.5rem] flex-1 rounded-md border border-gray-300 px-1 text-xs"
           >
-          <span class="shrink-0 text-xs text-gray-400">to</span>
+          <span class="shrink-0 text-xs text-gray-400" aria-hidden="true">to</span>
           <input
             v-model="row.endTime"
             type="time"
             aria-label="End time"
             :aria-invalid="Boolean(rowErrors[index]) || undefined"
-            :aria-describedby="rowErrors[index] ? `business-hours-error-${index}` : undefined"
+            :aria-describedby="rowErrors[index] ? errorId(index) : undefined"
             class="h-7 min-w-[5.5rem] flex-1 rounded-md border border-gray-300 px-1 text-xs"
           >
           <Button variant="ghost" size="icon-sm" class="shrink-0" @click="removeTimeRow(index)">
-            <X />
-            <span class="sr-only">Remove time</span>
+            <X aria-hidden="true" />
+            <span class="sr-only">Remove time range {{ index + 1 }}</span>
           </Button>
         </div>
-        <p v-if="rowErrors[index]" :id="`business-hours-error-${index}`" class="text-xs text-red-500">{{ rowErrors[index] }}</p>
+        <p v-if="rowErrors[index]" :id="errorId(index)" class="text-xs text-red-500">{{ rowErrors[index] }}</p>
       </div>
     </div>
 
-    <Button variant="outline" size="sm" class="self-start" @click="addTimeRow">Add time</Button>
+    <Button variant="outline" size="sm" class="self-start" data-add-time @click="addTimeRow">Add time</Button>
   </div>
 </template>

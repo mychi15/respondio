@@ -17,8 +17,8 @@ function jsonResponse(body: unknown, status = 200, headers: Record<string, strin
   })
 }
 
-// True until this function instance serves its first request, so that
-// request can be flagged as having paid the cold-start cost.
+// True until this function instance serves its first POST, so that save can
+// be flagged (via Server-Timing) as having paid the cold-start cost.
 let isColdStart = true
 
 /**

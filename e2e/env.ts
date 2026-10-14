@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 
 /**
  * Playwright's Node process doesn't get Vite's automatic .env.local loading,
- * but e2e needs VITE_API_BASE_URL to reset the test blob key via plain fetch
+ * but e2e needs VITE_API_BASE_URL to reset the test flow key via plain fetch
  * (outside the browser) and to pass VITE_FLOW_KEY through to the spawned dev
  * server. Parses the same file Vite reads, without adding a dotenv dependency.
  */

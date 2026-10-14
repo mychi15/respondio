@@ -64,7 +64,7 @@ To run the API locally instead, set `VITE_API_BASE_URL` in `.env.local` and prov
 
 2. **Canvas.** [CanvasView.vue](src/views/CanvasView.vue) renders the tree with [Vue Flow](https://vueflow.dev/). Node positions are stored on each node: a flow without them gets one auto-layout pass on load ([src/utils/flowLayout.ts](src/utils/flowLayout.ts) walks the tree depth-first and lays out each node under its parent), and after that drags and new nodes save their own positions. **Auto-align** reruns the layout and saves fresh positions for every node. Quick-add affordances (a `+` on every edge midpoint, a `+` after every leaf) let you insert or append a node besides the "Create New Node" button.
 
-3. **State.** [useFlowStore](src/stores/useFlowStore.ts) (Pinia, setup-store style) is the single source of truth for `nodes`. All mutations (`createNode`, `updateNode`, `updateBusinessHours`, `updateSendMessagePayload`, `updateComment`, `deleteNode`) act on it synchronously, then call `persist()`, which saves the whole flow through a TanStack Query mutation (see Persistence). The store derives `vueFlowNodes`/`vueFlowEdges`/`addNodePlaceholders` as computed properties, so the canvas is always a pure function of `nodes`.
+3. **State.** [useFlowStore](src/stores/useFlowStore.ts) (Pinia, setup-store style) is the single source of truth for `nodes`. All mutations act on it synchronously. Structural ones (`createNode`, `deleteNode`, `moveNodes`, `autoAlign`) then call `persist()` themselves; the drawer's field edits (`updateNode`, `updateBusinessHours`, `updateSendMessagePayload`, `updateComment`) are applied together and persisted once when "Save changes" is clicked. `persist()` records an undo step and saves the whole flow through a TanStack Query mutation (see Persistence). The store derives `vueFlowNodes`/`vueFlowEdges`/`addNodePlaceholders` as computed properties, so the canvas is always a pure function of `nodes`.
 
 4. **Editing.** Clicking an interactive node opens [NodeDrawer.vue](src/components/nodes/NodeDrawer.vue), which renders a per-type fields component (`SendMessageFields`, `AddCommentFields`, `BusinessHoursFields`) alongside the shared title/description editor and delete action. The drawer is driven by the URL: opening a node navigates to `/node/:nodeId`, and loading that URL directly (a shared link, a refresh, Back/Forward) opens the canvas with that node's drawer. A link to a node that doesn't exist, or to one with no details (trigger, connector), closes the drawer with a toast.
 
@@ -158,7 +158,7 @@ pnpm typecheck   # vue-tsc --noEmit
 pnpm test
 ```
 
-**End-to-end tests** (Playwright, [e2e/golden-path.spec.ts](e2e/golden-path.spec.ts)): drives the full flow against a dedicated test blob key (`TEST_FLOW_KEY`, separate from the real flow data) and asserts against both the UI and the persisted JSON.
+**End-to-end tests** (Playwright, [e2e/golden-path.spec.ts](e2e/golden-path.spec.ts)): drives the full flow against a dedicated test flow key (`TEST_FLOW_KEY`, separate from the real flow data) and asserts against both the UI and the persisted JSON.
 
 ```mermaid
 flowchart TD

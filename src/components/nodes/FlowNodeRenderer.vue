@@ -9,8 +9,6 @@ import { CONNECTOR_WIDTH, getNodeHeight, NODE_WIDTH } from '@/utils/flowLayout'
 
 const props = defineProps<NodeProps<FlowNode>>()
 
-const emit = defineEmits<{ click: [nodeId: FlowNode['id']] }>()
-
 const interactive = computed(() => isInteractiveNodeType(props.data.type))
 
 const isConnector = computed(() => props.data.type === 'dateTimeConnector')
@@ -63,10 +61,6 @@ const connectorStyle = computed(() => ({
   color: connectorColor.value,
   backgroundColor: `${connectorColor.value}1A`,
 }))
-
-function handleClick() {
-  emit('click', props.data.id)
-}
 </script>
 
 <template>
@@ -77,7 +71,6 @@ function handleClick() {
     :style="cardStyle"
     @mouseenter="isHovered = true"
     @mouseleave="isHovered = false"
-    v-on="interactive ? { click: handleClick } : {}"
   >
     <div class="flex items-center gap-2 border-b border-gray-200 px-3 py-2">
       <span

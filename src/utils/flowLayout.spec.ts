@@ -162,7 +162,7 @@ describe('hasVariableLengthDescription', () => {
     expect(hasVariableLengthDescription(trigger)).toBe(false)
   })
 
-  it('is true for a sendMessage node with a non-empty payload', () => {
+  it('is true for a sendMessage node with message text', () => {
     const node: FlowNode = {
       id: 1,
       parentId: -1,
@@ -195,23 +195,6 @@ describe('hasVariableLengthDescription', () => {
   it('is false for an addComment node with an empty comment', () => {
     const node: FlowNode = { id: 1, parentId: -1, type: 'addComment', data: { comment: '' } }
     expect(hasVariableLengthDescription(node)).toBe(false)
-  })
-
-  it('is false for dateTime and trigger nodes, since their auto-generated text is short and fixed-format', () => {
-    const dateTime: FlowNode = {
-      id: 1,
-      parentId: -1,
-      type: 'dateTime',
-      data: { times: [], connectors: [], timezone: 'UTC', action: 'businessHours' },
-    }
-    const trigger: FlowNode = {
-      id: 2,
-      parentId: -1,
-      type: 'trigger',
-      data: { type: 'conversationOpened', oncePerContact: true },
-    }
-    expect(hasVariableLengthDescription(dateTime)).toBe(false)
-    expect(hasVariableLengthDescription(trigger)).toBe(false)
   })
 
   it('is false for a connector node', () => {

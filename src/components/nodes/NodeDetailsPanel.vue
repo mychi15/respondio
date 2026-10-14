@@ -57,7 +57,7 @@ async function saveChanges() {
     await flowStore.persist()
     toast.show(flowStore.isSampleData ? 'Changes applied (sample data, not saved)' : 'Changes saved')
   } catch {
-    // Failure toast is already shown by the store's pendingSave chain.
+    // Failure toast is already shown by the store's save mutation (onError).
   } finally {
     saving.value = false
   }

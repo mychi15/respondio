@@ -100,12 +100,12 @@ export function computeNodePositions(nodes: FlowNode[]): Map<NodeId, FlowPositio
   const yById = new Map<NodeId, number>()
   const xSlotById = new Map<NodeId, number>()
 
-  // Pass 1 (top-down): walk the tree parent-before-children. Each node's y
-  // is its parent's y, plus the parent's height, plus a gap, plus its own
-  // height — stacked directly under its parent. Each leaf (no children) also
-  // gets the next horizontal slot, in increasing order (0, 1, 2, ...), left
-  // to right. Parent nodes get no horizontal slot here — only nodes with 
-  // no children do.
+  // Pass 1 (top-down): walk the tree parent-before-children. Each node's
+  // center y is its parent's center y, plus half the parent's height, plus a
+  // gap, plus half its own height — stacked directly under its parent. Each
+  // leaf (no children) also gets the next horizontal slot, in increasing
+  // order (0, 1, 2, ...), left to right. Parent nodes get no horizontal slot
+  // here — only nodes with no children do.
   let nextLeafSlot = 0
   for (const { node } of order) {
     const parent = node.parentId === -1 ? undefined : nodesById.get(node.parentId)

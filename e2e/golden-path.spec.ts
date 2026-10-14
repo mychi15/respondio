@@ -23,9 +23,9 @@ async function fetchPersistedFlow(): Promise<PersistedNode[]> {
 }
 
 /**
- * The store persists fire-and-forget (see useFlowStore's `persist()`), so the
- * UI reports success before the network write lands. Poll instead of reading
- * the API once right after a UI action.
+ * Creates, deletes and moves persist fire-and-forget (see useFlowStore's
+ * `persist()`), so the UI updates before the network write lands. Poll
+ * instead of reading the API once right after a UI action.
  */
 async function waitForPersistedFlow(
   predicate: (nodes: PersistedNode[]) => boolean,
@@ -54,8 +54,7 @@ async function resetTestFlow(): Promise<void> {
   })
   if (!res.ok) throw new Error(`Failed to reset test flow: ${res.status}`)
 
-  // Blob writes can lag behind reads for a moment (CDN edge consistency) —
-  // confirm the reset actually landed before the test builds on top of it.
+  // Confirm the reset actually landed before the test builds on top of it.
   await waitForPersistedFlow((nodes) => nodes.length === mockFlow.length && !nodes.some((n) => n.name?.startsWith('E2E Test Node')))
 }
 
@@ -68,7 +67,7 @@ test.beforeEach(async () => {
 })
 
 test('golden path: load, create, edit, upload, type-specific edit, delete (cascade)', async ({ page }) => {
-  test.setTimeout(120000) // real network round trips (deployed API, real Blob store), not mocked
+  test.setTimeout(120000) // real network round trips (deployed API, Redis, Blob upload), not mocked
 
   await page.goto('/')
   await page.getByText('Loading flow…').waitFor({ state: 'hidden' })
@@ -156,16 +155,21 @@ test('keyboard: open the drawer from a node, close it with Escape, and move the 
   await expect(addButton).toBeFocused()
 
   // Vue Flow only arrow-moves a selected node; opening selects it, then move
-  // with focus back on the node. The fixture has no stored positions, so any
-  // persisted position means the keyboard move was saved.
+  // with focus back on the node. The fixture has no stored positions, so the
+  // first save gives a baseline; a second move must then land further right.
   const nodeId = mockFlow.find((candidate) => candidate.name === 'Welcome message')!.id
+  const positionOf = (nodes: PersistedNode[]) => nodes.find((candidate) => candidate.id === nodeId)?.position
   await node.focus()
   await page.keyboard.press('Enter')
   await node.focus()
   await page.keyboard.press('ArrowRight')
+  const baseline = positionOf(await waitForPersistedFlow((nodes) => positionOf(nodes) !== undefined))
+  expect(baseline).toBeDefined()
 
-  const persisted = await waitForPersistedFlow((nodes) => nodes.find((candidate) => candidate.id === nodeId)?.position !== undefined)
-  expect(persisted.find((candidate) => candidate.id === nodeId)?.position).toBeDefined()
+  await page.keyboard.press('ArrowRight')
+  const moved = positionOf(await waitForPersistedFlow((nodes) => (positionOf(nodes)?.x ?? -Infinity) > baseline!.x))
+  expect(moved?.x).toBeGreaterThan(baseline!.x)
+  expect(moved?.y).toBe(baseline!.y)
 })
 
 test('deep link: a /node/:nodeId URL opens the canvas with that node\'s drawer', async ({ page }) => {

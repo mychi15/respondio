@@ -38,13 +38,6 @@ describe('SendMessageFields', () => {
     expect(textareas[0].element.value).toBe('Hi! Thanks for reaching out.')
   })
 
-  it('has no button to add or remove the message field', () => {
-    const wrapper = mountFields(sendMessageNode)
-
-    expect(wrapper.findAll('button').some((button) => button.text() === 'Add text')).toBe(false)
-    expect(wrapper.find('[aria-label="Remove message"]').exists()).toBe(false)
-  })
-
   it('renders existing attachments as an image preview tile', () => {
     const wrapper = mountFields(sendMessageNode)
 

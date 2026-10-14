@@ -54,28 +54,9 @@ describe('FlowNodeRenderer', () => {
     expect(description.text()).toContain('A long description')
   })
 
-  it('emits click when an interactive node is clicked', async () => {
-    const wrapper = mount(FlowNodeRenderer, { props: buildProps('2', sendMessageNode) })
-
-    await wrapper.find('div').trigger('click')
-
-    expect(wrapper.emitted('click')).toEqual([[2]])
-  })
-
-  it('does not emit click for a trigger node', async () => {
-    const wrapper = mount(FlowNodeRenderer, { props: buildProps('1', triggerNode) })
-
-    await wrapper.find('div').trigger('click')
-
-    expect(wrapper.emitted('click')).toBeUndefined()
-  })
-
-  it('does not emit click for a connector node', async () => {
-    const wrapper = mount(FlowNodeRenderer, { props: buildProps('4', connectorNode) })
-
-    await wrapper.find('div').trigger('click')
-
-    expect(wrapper.emitted('click')).toBeUndefined()
+  it('shows a pointer cursor only for interactive nodes', () => {
+    expect(mount(FlowNodeRenderer, { props: buildProps('2', sendMessageNode) }).classes()).toContain('cursor-pointer')
+    expect(mount(FlowNodeRenderer, { props: buildProps('1', triggerNode) }).classes()).toContain('cursor-default')
   })
 
   it('renders a connector node as a plain labeled block with no icon or description', () => {

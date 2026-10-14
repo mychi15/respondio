@@ -4,7 +4,7 @@
 - **Framework:** Vue 3 (Latest stable releases)
 - **Language:** TypeScript (`<script setup lang="ts">`)
 - **State Management:** Pinia (Prefer Setup Stores over Option Stores)
-- **Styling:** Tailwind CSS / UnoCSS
+- **Styling:** Tailwind CSS
 - **Build Tool:** Vite
 
 ## Critical Vue Conventions
@@ -47,4 +47,4 @@
 - **Package Manager:** Use `pnpm` exclusively (do not mix with npm/yarn).
 - **Run Dev Server:** `pnpm dev`
 - **Lint & Format:** Run `pnpm lint` and `pnpm typecheck` before finalizing tasks.
-- **Testing:** Execute component or E2E tests via `pnpm test`. Verify all Vitest or Playwright assertions pass before declaring a task complete.
+- **Testing:** Execute unit/component tests via `pnpm test` and E2E tests via `pnpm test:e2e`. Verify all Vitest or Playwright assertions pass before declaring a task complete.

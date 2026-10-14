@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { BusinessHoursNode } from '@/types/flow'
@@ -38,9 +38,10 @@ const businessHoursNode: BusinessHoursNode = {
   },
 }
 
-function mountFields(node: BusinessHoursNode) {
+function mountFields(node: BusinessHoursNode, options: { attachTo?: HTMLElement } = {}) {
   return mount(BusinessHoursFields, {
     props: { node },
+    ...options,
     global: {
       stubs: {
         Combobox: SelectStub,
@@ -58,6 +59,10 @@ function mountFields(node: BusinessHoursNode) {
       },
     },
   })
+}
+
+function findRemoveButton(wrapper: ReturnType<typeof mountFields>, rowNumber: number) {
+  return wrapper.findAll('button').find((button) => button.find('.sr-only').exists() && button.find('.sr-only').text() === `Remove time range ${rowNumber}`)
 }
 
 describe('BusinessHoursFields', () => {
@@ -125,12 +130,57 @@ describe('BusinessHoursFields', () => {
   it('removes a time row when its remove button is clicked', async () => {
     const wrapper = mountFields(businessHoursNode)
 
-    const removeButton = wrapper
-      .findAll('button')
-      .find((button) => button.find('.sr-only').exists() && button.find('.sr-only').text() === 'Remove time')
-    await removeButton!.trigger('click')
+    await findRemoveButton(wrapper, 1)!.trigger('click')
 
     expect(wrapper.findAll('input[type="time"]')).toHaveLength(0)
+  })
+
+  it('labels the hours as a group and numbers each row as its own group', () => {
+    const wrapper = mountFields(businessHoursNode)
+
+    const hours = wrapper.find('[role="group"][aria-labelledby]')
+    expect(wrapper.find(`#${hours.attributes('aria-labelledby')}`).text()).toBe('Business hours')
+    expect(hours.find('[role="group"]').attributes('aria-label')).toBe('Time range 1')
+    expect(findRemoveButton(wrapper, 1)).toBeDefined()
+  })
+
+  it('gives the real day picker an accessible name', () => {
+    const wrapper = mount(BusinessHoursFields, { props: { node: businessHoursNode } })
+
+    expect(wrapper.find('[data-slot="select-trigger"]').attributes('aria-label')).toBe('Day')
+  })
+
+  it('says when no business hours are set', async () => {
+    const wrapper = mountFields({ ...businessHoursNode, data: { ...businessHoursNode.data, times: [] } })
+
+    expect(wrapper.text()).toContain('No business hours set.')
+  })
+
+  it('moves focus into a newly added row', async () => {
+    const wrapper = mountFields(businessHoursNode, { attachTo: document.body })
+
+    await wrapper.find('[data-add-time]').trigger('click')
+    await flushPromises()
+
+    expect(document.activeElement).toBe(wrapper.findAll('[data-time-row]')[1].find('select').element)
+    wrapper.unmount()
+  })
+
+  it('keeps focus in the list when a row is removed, falling back to Add time once it is empty', async () => {
+    const twoRows: BusinessHoursNode = {
+      ...businessHoursNode,
+      data: { ...businessHoursNode.data, times: [...businessHoursNode.data.times, { day: 'tue', startTime: '09:00', endTime: '18:00' }] },
+    }
+    const wrapper = mountFields(twoRows, { attachTo: document.body })
+
+    await findRemoveButton(wrapper, 1)!.trigger('click')
+    await flushPromises()
+    expect(document.activeElement).toBe(wrapper.find('[data-time-row] select').element)
+
+    await findRemoveButton(wrapper, 1)!.trigger('click')
+    await flushPromises()
+    expect(document.activeElement).toBe(wrapper.find('[data-add-time]').element)
+    wrapper.unmount()
   })
 
   it('does not persist edits until save is called', async () => {

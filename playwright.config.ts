@@ -22,7 +22,7 @@ export default defineConfig({
     command: `pnpm exec vite --port ${PORT}`,
     url: `http://localhost:${PORT}`,
     // Always a fresh instance: the e2e app must run with VITE_FLOW_KEY pointed
-    // at the test-only blob key, which a reused dev-mode server wouldn't have.
+    // at the test-only flow key, which a reused dev-mode server wouldn't have.
     reuseExistingServer: false,
     env: { VITE_FLOW_KEY: TEST_FLOW_KEY },
   },

@@ -11,7 +11,8 @@ A canvas-based flow chart app for building messaging/automation flows, built wit
 - Vue Router
 - Vue Flow (`@vue-flow/core`)
 - TanStack Query (`@tanstack/vue-query`)
-- Vercel Blob (attachment storage + persisted flow JSON)
+- Upstash Redis (persisted flow JSON — moved off Vercel Blob for fast, consistent saves; see README design decision 9)
+- Vercel Blob (attachment storage)
 - Vercel Serverless Functions (upload handler, flow JSON read/write)
 - Tailwind CSS
 - shadcn-vue (reka-ui base, lucide icons) — modal/select/button/form primitives
@@ -128,16 +129,16 @@ type FlowNode =
 ### M3 — Node Details Drawer (Core)
 - [x] Drawer component, toggled by clicking a node (closed by clicking elsewhere / close button)
 - [x] Route-driven visibility: drawer open state driven by `/node/:nodeId` (deep-linkable, shareable URL) — both routes render `CanvasView`; `useNodeDrawer` reads the open node from the route and `open`/`close` navigate. Replaced the earlier standalone `NodeDetailView` page
-- [x] Drawer header: editable title + description fields (inline edit, persisted to store)
+- [x] Drawer header: editable title + description fields (applied and persisted on "Save changes")
 - [x] Delete node action (with confirmation) from drawer — **cascades**: deleting a node removes it and every downstream descendant (recursive `parentId` chain), including any `success`/`failure` connector branches and their children
 - [x] Guard: `trigger` / `success` / `failure` nodes never open a drawer / aren't clickable
-- [x] Composable `useNodeDrawer()` for open/close + route sync logic — open/close/resize state; route sync still pending (see above)
+- [x] Composable `useNodeDrawer()` for open/close + route sync logic — open/close/resize state, with the open node derived from the route
 - [x] Unit tests: drawer open/close, edit, delete
 
 ### M4 — Node-Type-Specific Drawer Content
 - [x] **Send Message**
   - [x] Attachments section: existing attachments (`payload[].attachment` URLs) shown as tile/box previews
-  - [x] Upload new attachment: file input → POST to serverless function (`/api/upload`) → function streams file to Vercel Blob → returns CDN URL → append `{ type: 'attachment', attachment: cdnUrl }` to `payload` and persist — currently files are read client-side as base64 data URLs (`SendMessageFields.vue`); the Blob upload endpoint is M5 scope
+  - [x] Upload new attachment: file input → `/api/upload` issues a Vercel Blob client-upload token → browser uploads straight to Blob → CDN URL appended as `{ type: 'attachment', attachment: cdnUrl }` to `payload` and persisted on save
   - [x] Remove attachment from list (removes the payload item; orphaned blob cleanup out of MVP scope)
   - [x] Message text: input field showing existing text(s), allow update/remove
 - [x] **Add Comments**
@@ -153,14 +154,14 @@ type FlowNode =
 
 ### M5 — Data Layer / Persistence
 - [x] Define API contract from the finalized schema (fetch/save flow + nodes) — `GET`/`POST /api/flow?key=`
-- [x] Author **mock schema fixture**: full flow sample with every node type represented; `description` is optional per node, so include both nodes with a populated `description` and nodes without one (matching real-world data); uploaded to **Vercel Blob** as the static source-of-truth JSON for e2e testing — `api/_fixtures/mockFlow.json`, seeded to Blob lazily on first `GET` of a missing key
-- [x] Serverless function `POST /api/flow` (or similar): reads/writes the flow JSON blob — update-in-place on every mutation (create/update/delete node, including cascade deletes)
+- [x] Author **mock schema fixture**: full flow sample with every node type represented; `description` is optional per node, so include both nodes with a populated `description` and nodes without one (matching real-world data); used as the source-of-truth payload for e2e testing — `api/_fixtures/mockFlow.ts`, seeded to Redis lazily on first `GET` of a missing key (and bundled as the offline sample flow)
+- [x] Serverless function `GET/POST /api/flow`: reads/writes the flow JSON in Redis — the full flow is written on every mutation (create/update/delete node, including cascade deletes)
 - [x] Serverless function `POST /api/upload`: accepts a file, uploads to Vercel Blob, returns the resulting CDN URL to be stored in `payload[].attachment` — implemented as a Vercel Blob client-upload token endpoint (`handleUpload`) rather than a server-side proxy, to avoid the serverless body-size limit
-- [x] Wire Vue Query for fetching flow data (load on canvas mount, from the Blob-hosted JSON via the read endpoint)
-- [x] Wire Vue Query mutations for create/update/delete node, attachments, comments, business hours — each mutation persists the full updated flow JSON back to Blob via `/api/flow` — the store mutates its local working copy synchronously, then `persist()` saves the full flow through one scoped `useMutation` (serial, in call order) that also writes the saved copy into the `['flow']` query cache.
+- [x] Wire Vue Query for fetching flow data (load on canvas mount, via the `/api/flow` read endpoint)
+- [x] Wire Vue Query mutations for create/update/delete node, attachments, comments, business hours — each persists the full updated flow JSON via `/api/flow`: the store mutates its local working copy synchronously, then `persist()` saves the full flow through one scoped `useMutation` (serial, in call order) that also writes the saved copy into the `['flow']` query cache.
 - [x] Optimistic updates + cache invalidation strategy — simple strategy: store stays source of truth, mutates immediately, persists after; no rollback on failure (toast only) — accepted MVP tradeoff, not full `onMutate`/`onError` rollback
 - [x] Error/loading states surfaced in UI (including upload failure/progress) — canvas loading placeholder, toast on fetch/save/upload failure, per-attachment uploading spinner tile
-- [x] Playwright E2E golden path driven against the Blob-hosted mock schema: load flow → create node → edit title/description → upload attachment → edit type-specific fields → delete (cascade) → verify canvas + drawer state + updated Blob JSON
+- [x] Playwright E2E golden path driven against the mock schema on a dedicated test flow key: load flow → create node → edit title/description → upload attachment → edit type-specific fields → delete (cascade) → verify canvas + drawer state + persisted flow JSON
 
 ### M6 — Polish & Hardening
 - [x] Canvas UX: pan/zoom defaults, minimap/controls (Vue Flow built-ins) as needed
@@ -184,5 +185,5 @@ type FlowNode =
 - [x] Timezone field — select field listing all timezones
 - [x] Node deletion behavior — cascades to all downstream descendants
 - [x] New node `id` generation — conforms to the existing 6-character hex-string style (e.g. `b6a0c1`)
-- [x] Description field — added to schema as optional `description: string` on every node; mock schema (used for e2e testing) must populate it on all sample nodes
-- [x] Attachment upload — handled via a Vercel Serverless Function that uploads to Vercel Blob and returns the CDN URL, stored in `payload[].attachment`; the mock flow JSON is itself hosted on Vercel Blob and updated in place on every mutation
+- [x] Description field — added to schema as optional `description: string` on every node; mock schema (used for e2e testing) mixes nodes with and without one
+- [x] Attachment upload — handled via a Vercel Serverless Function that uploads to Vercel Blob and returns the CDN URL, stored in `payload[].attachment`; flow JSON lives in Upstash Redis
