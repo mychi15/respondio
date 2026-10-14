@@ -25,9 +25,10 @@ See [ROADMAP.md](ROADMAP.md) for the full milestone history and the original sco
 
 - **Deleting a node** also deletes every node downstream of it, after a confirmation.
 - **Form validation:**
-  - Title is required.
-  - Description is optional.
-  - Each business-hours row needs a start time before its end time, and no two rows on the same day may share a start or end time.
+  - Title is required, up to 100 characters.
+  - Description is optional; it, the message text and the comment are each capped at 1,000 characters.
+  - Each business-hours row needs a start and end time, with the start before the end, and may not overlap an earlier row on the same day. Back-to-back ranges (09:00–12:00, 12:00–17:00) are allowed.
+  - Attachments must be PNG, JPEG, GIF, WebP, SVG or PDF, up to 10 MB each. The browser checks this before uploading, and the upload endpoint enforces the same rules ([nodeFormValidation.ts](src/utils/nodeFormValidation.ts)).
 
 ### Nice-to-haves
 
@@ -116,7 +117,8 @@ To run the API locally instead, set `VITE_API_BASE_URL` in `.env.local` and prov
 ```
 src/
   components/
-    nodes/        # node renderer, drawer, per-type field editors
+    nodes/         # node renderer, drawer, details panel
+    forms/         # per-type field editors, shared field error/counter line
     toolbar/       # create-node modal/form, parent-picker tree select
     edges/         # custom quick-add edge
     ui/            # shadcn-vue primitives (button, dialog, select, ...)

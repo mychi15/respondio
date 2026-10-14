@@ -138,7 +138,7 @@ type FlowNode =
 ### M4 — Node-Type-Specific Drawer Content
 - [x] **Send Message**
   - [x] Attachments section: existing attachments (`payload[].attachment` URLs) shown as tile/box previews
-  - [x] Upload new attachment: file input → `/api/upload` issues a Vercel Blob client-upload token → browser uploads straight to Blob → CDN URL appended as `{ type: 'attachment', attachment: cdnUrl }` to `payload` and persisted on save
+  - [x] Upload new attachment: file input → `/api/upload` issues a Vercel Blob client-upload token → browser uploads straight to Blob → CDN URL appended as `{ type: 'attachment', attachment: cdnUrl }` to `payload` and persisted on save. File type and size rules live in `src/utils/nodeFormValidation.ts`, checked in the browser first and enforced by the token endpoint
   - [x] Remove attachment from list (removes the payload item; orphaned blob cleanup out of MVP scope)
   - [x] Message text: input field showing existing text(s), allow update/remove
 - [x] **Add Comments**
@@ -149,7 +149,7 @@ type FlowNode =
   - [x] Render `data.times` (one row per weekday, `mon`–`sun`) with start/end time pickers
   - [x] `data.timezone`: select field listing timezones (`TIMEZONE_OPTIONS` combobox over the full `Intl.supportedValuesOf('timeZone')` set, with UTC offsets precomputed into JSON)
   - [x] Preserve `data.connectors` (success/failure branch ids) on save — not user-editable, just passed through
-  - [x] Validate `startTime < endTime` per row (24h `HH:mm`)
+  - [x] Validate `startTime < endTime` per row (24h `HH:mm`), and flag a row that overlaps an earlier one on the same day
 - [x] Composables per concern: `useAttachments()`, `useComments()`, `useBusinessHours()` — implemented instead as per-type field components (`SendMessageFields.vue`, `AddCommentFields.vue`, `BusinessHoursFields.vue`) rather than standalone composables
 
 ### M5 — Data Layer / Persistence

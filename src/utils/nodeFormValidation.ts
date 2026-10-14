@@ -1,4 +1,4 @@
-import type { BusinessHoursNode, CreatableNodeType, NodeId } from '../types/flow'
+import type { BusinessHoursNode, CreatableNodeType, NodeId } from '../types/flow.js'
 
 export interface CreateNodeFormInput {
   name: string
