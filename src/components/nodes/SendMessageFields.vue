@@ -5,9 +5,17 @@ import type { SendMessageNode, SendMessagePayloadItem } from '@/types/flow'
 import { useFlowStore } from '@/stores/useFlowStore'
 import { uploadAttachment } from '@/api/uploadApi'
 import { useToast } from '@/composables/useToast'
+import {
+  ALLOWED_ATTACHMENT_TYPES,
+  ATTACHMENT_RULES_HINT,
+  TEXT_MAX_LENGTH,
+  validateAttachment,
+  validateMaxLength,
+} from '@/utils/nodeFormValidation'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import FieldMessage from '@/components/forms/FieldMessage.vue'
 
 const props = defineProps<{ node: SendMessageNode }>()
 
@@ -28,6 +36,13 @@ const fileInput = ref<HTMLInputElement | null>(null)
 
 // Exposed so the panel can hold Save until every upload has a URL to store.
 const isUploading = computed(() => attachments.some((attachment) => attachment.uploading))
+
+const messageError = computed(() => validateMaxLength(messageText.value, TEXT_MAX_LENGTH, 'Message'))
+
+// Exposed so the panel can hold Save while the message is too long.
+const isValid = computed(() => !messageError.value)
+
+const ACCEPT = ALLOWED_ATTACHMENT_TYPES.join(',')
 
 watch(
   () => props.node,
@@ -64,6 +79,14 @@ function handleFileChange(event: Event) {
   if (!files?.length) return
 
   for (const file of Array.from(files)) {
+    // `accept` only filters the picker (drag-drop and "All files" bypass it),
+    // so the same rules the upload endpoint enforces are checked here first.
+    const invalidReason = validateAttachment(file)
+    if (invalidReason) {
+      toast.show(invalidReason, 'error')
+      continue
+    }
+
     const id = String(nextAttachmentId++)
     attachments.push({ id, url: '', uploading: true })
 
@@ -77,7 +100,7 @@ function handleFileChange(event: Event) {
       })
       .catch(() => {
         attachments.splice(attachments.findIndex((candidate) => candidate.id === id), 1)
-        toast.show(`Failed to upload "${file.name}". Please try again.`)
+        toast.show(`Failed to upload "${file.name}". Please try again.`, 'error')
       })
   }
 
@@ -95,14 +118,21 @@ function save() {
   flowStore.updateSendMessagePayload(props.node.id, payload)
 }
 
-defineExpose({ save, isUploading })
+defineExpose({ save, isUploading, isValid })
 </script>
 
 <template>
   <div class="flex flex-col gap-4">
     <div class="flex flex-col gap-1.5">
       <Label for="send-message-text">Message</Label>
-      <Textarea id="send-message-text" v-model="messageText" placeholder="Optional message text" />
+      <Textarea
+        id="send-message-text"
+        v-model="messageText"
+        placeholder="Optional message text"
+        :aria-invalid="Boolean(messageError) || undefined"
+        :aria-describedby="messageError ? 'send-message-text-error' : undefined"
+      />
+      <FieldMessage id="send-message-text-error" :error="messageError" :length="messageText.length" :max-length="TEXT_MAX_LENGTH" />
     </div>
 
     <div class="flex flex-col gap-1.5">
@@ -140,8 +170,11 @@ defineExpose({ save, isUploading })
         </div>
       </div>
 
-      <Button variant="outline" size="sm" class="self-start" @click="openFilePicker">Add attachment</Button>
-      <input ref="fileInput" type="file" class="hidden" multiple @change="handleFileChange">
+      <Button variant="outline" size="sm" class="self-start" aria-describedby="send-message-attachment-hint" @click="openFilePicker">
+        Add attachment
+      </Button>
+      <p id="send-message-attachment-hint" class="text-xs text-gray-500">{{ ATTACHMENT_RULES_HINT }}</p>
+      <input ref="fileInput" type="file" class="hidden" multiple :accept="ACCEPT" @change="handleFileChange">
     </div>
   </div>
 </template>

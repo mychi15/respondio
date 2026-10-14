@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
+import { TEXT_MAX_LENGTH } from '@/utils/nodeFormValidation'
 import CreateNodeForm from './CreateNodeForm.vue'
 
 // The real Select and NodeTreeSelect are headless-UI components built on
@@ -135,6 +136,23 @@ describe('CreateNodeForm', () => {
     expect(wrapper.emitted('submit')).toEqual([
       [{ name: 'Follow up', description: 'ask about order status', type: 'sendMessage', parentId: 1 }],
     ])
+  })
+
+  it('marks invalid fields and points them at their error messages', async () => {
+    const wrapper = mountForm({ types: ['sendMessage'], requiresParent: false })
+
+    await selectType(wrapper, 'sendMessage')
+    await wrapper.find('#create-node-description').setValue('a'.repeat(TEXT_MAX_LENGTH + 1))
+    await wrapper.find('form').trigger('submit')
+
+    const title = wrapper.find('#create-node-name')
+    expect(title.attributes('aria-invalid')).toBe('true')
+    expect(wrapper.find(`#${title.attributes('aria-describedby')}`).text()).toBe('Title is required')
+
+    const description = wrapper.find('#create-node-description')
+    expect(description.attributes('aria-invalid')).toBe('true')
+    expect(wrapper.find(`#${description.attributes('aria-describedby')}`).text()).toBe(`Description must be ${TEXT_MAX_LENGTH} characters or fewer`)
+    expect(wrapper.emitted('submit')).toBeUndefined()
   })
 
   it('omits description from the payload when left blank', async () => {

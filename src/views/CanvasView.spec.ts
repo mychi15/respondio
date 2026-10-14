@@ -86,6 +86,7 @@ describe('CanvasView', () => {
 
     expect(router.currentRoute.value.path).toBe('/')
     expect(useToast().message.value).toBe('That node no longer exists.')
+    expect(useToast().variant.value).toBe('warning')
     expect(useNodeDrawer().isOpen.value).toBe(false)
   })
 

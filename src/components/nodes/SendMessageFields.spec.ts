@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { SendMessageNode } from '@/types/flow'
 import { useFlowStore } from '@/stores/useFlowStore'
 import { uploadAttachment } from '@/api/uploadApi'
+import { useToast } from '@/composables/useToast'
+import { TEXT_MAX_LENGTH } from '@/utils/nodeFormValidation'
 import SendMessageFields from './SendMessageFields.vue'
 
 const sendMessageNode: SendMessageNode = {
@@ -110,6 +112,40 @@ describe('SendMessageFields', () => {
     resolveUpload('https://example.com/late.png')
     await new Promise((resolve) => setTimeout(resolve, 0))
     expect(wrapper.vm.isUploading).toBe(false)
+  })
+
+  it('limits the file picker to the supported attachment types', () => {
+    const wrapper = mountFields(sendMessageNode)
+
+    expect(wrapper.find('input[type="file"]').attributes('accept')).toContain('image/png')
+    expect(wrapper.find('input[type="file"]').attributes('accept')).toContain('application/pdf')
+  })
+
+  it.each([
+    ['an unsupported file type', new File(['content'], 'setup.exe', { type: 'application/x-msdownload' }), `"setup.exe" isn't a supported file type`],
+    ['a file over 10 MB', new File([new Uint8Array(10 * 1024 * 1024 + 1)], 'huge.png', { type: 'image/png' }), '"huge.png" is larger than 10 MB.'],
+  ])('rejects %s with an error toast before uploading', async (_, file, message) => {
+    vi.mocked(uploadAttachment).mockClear()
+    const wrapper = mountFields(sendMessageNode)
+
+    const input = wrapper.find('input[type="file"]')
+    Object.defineProperty(input.element, 'files', { value: [file] })
+    await input.trigger('change')
+
+    expect(uploadAttachment).not.toHaveBeenCalled()
+    expect(useToast().message.value).toContain(message)
+    expect(useToast().variant.value).toBe('error')
+    expect(wrapper.vm.isUploading).toBe(false)
+  })
+
+  it('reports the message as invalid once it is over the length limit', async () => {
+    const wrapper = mountFields(sendMessageNode)
+
+    await wrapper.find('textarea').setValue('a'.repeat(TEXT_MAX_LENGTH + 1))
+
+    expect(wrapper.text()).toContain(`Message must be ${TEXT_MAX_LENGTH} characters or fewer`)
+    expect(wrapper.find('textarea').attributes('aria-invalid')).toBe('true')
+    expect(wrapper.vm.isValid).toBe(false)
   })
 
   it('removes an attachment when its remove button is clicked', async () => {

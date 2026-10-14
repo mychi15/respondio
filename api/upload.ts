@@ -1,5 +1,6 @@
 import { handleUpload } from '@vercel/blob/client'
 import type { HandleUploadBody } from '@vercel/blob/client'
+import { ALLOWED_ATTACHMENT_TYPES, MAX_ATTACHMENT_BYTES } from '../src/utils/nodeFormValidation.js'
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -7,10 +8,6 @@ const CORS_HEADERS = {
   'Access-Control-Allow-Headers': 'Content-Type',
   'Access-Control-Max-Age': '86400',
 }
-
-const ALLOWED_CONTENT_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'image/svg+xml', 'application/pdf']
-
-const MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 
 export function OPTIONS(): Response {
   return new Response(null, { status: 204, headers: CORS_HEADERS })
@@ -24,8 +21,8 @@ export async function POST(request: Request): Promise<Response> {
       body,
       request,
       onBeforeGenerateToken: async () => ({
-        allowedContentTypes: ALLOWED_CONTENT_TYPES,
-        maximumSizeInBytes: MAX_UPLOAD_BYTES,
+        allowedContentTypes: ALLOWED_ATTACHMENT_TYPES,
+        maximumSizeInBytes: MAX_ATTACHMENT_BYTES,
         addRandomSuffix: true,
       }),
       onUploadCompleted: async () => {},

@@ -5,11 +5,12 @@ import { FLOW_NODE_TYPE_LABELS } from '@/types/flow'
 import { isInteractiveNodeType } from '@/utils/flowGraph'
 import { useFlowStore } from '@/stores/useFlowStore'
 import { useToast } from '@/composables/useToast'
-import { validateTitle } from '@/utils/nodeFormValidation'
+import { TEXT_MAX_LENGTH, TITLE_MAX_LENGTH, validateDescription, validateTitle } from '@/utils/nodeFormValidation'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
+import FieldMessage from '@/components/forms/FieldMessage.vue'
 import BusinessHoursFields from './BusinessHoursFields.vue'
 import SendMessageFields from './SendMessageFields.vue'
 import AddCommentFields from './AddCommentFields.vue'
@@ -39,9 +40,11 @@ const typeFieldsRef = ref<{ save?: () => void; isUploading?: boolean; isValid?: 
 const isUploading = computed(() => Boolean(typeFieldsRef.value?.isUploading))
 
 const titleError = computed(() => validateTitle(form.name))
+const descriptionError = computed(() => validateDescription(form.description))
 
-// Type fields that don't validate (comments, messages) don't expose isValid.
-const canSave = computed(() => !titleError.value && typeFieldsRef.value?.isValid !== false)
+// The built-in type fields all expose isValid; slot content may not, which
+// counts as valid.
+const canSave = computed(() => !titleError.value && !descriptionError.value && typeFieldsRef.value?.isValid !== false)
 
 const toast = useToast()
 
@@ -55,7 +58,8 @@ async function saveChanges() {
   saving.value = true
   try {
     await flowStore.persist()
-    toast.show(flowStore.isSampleData ? 'Changes applied (sample data, not saved)' : 'Changes saved')
+    if (flowStore.isSampleData) toast.show('Changes applied (sample data, not saved)', 'warning')
+    else toast.show('Changes saved', 'success')
   } catch {
     // Failure toast is already shown by the store's save mutation (onError).
   } finally {
@@ -81,7 +85,7 @@ async function saveChanges() {
         :aria-invalid="Boolean(titleError) || undefined"
         :aria-describedby="titleError ? 'node-details-name-error' : undefined"
       />
-      <p v-if="titleError" id="node-details-name-error" class="text-xs text-red-500">{{ titleError }}</p>
+      <FieldMessage id="node-details-name-error" :error="titleError" :length="form.name.length" :max-length="TITLE_MAX_LENGTH" />
     </div>
 
     <div class="flex flex-col gap-1.5">
@@ -90,6 +94,14 @@ async function saveChanges() {
         id="node-details-description"
         v-model="form.description"
         placeholder="Optional description"
+        :aria-invalid="Boolean(descriptionError) || undefined"
+        :aria-describedby="descriptionError ? 'node-details-description-error' : undefined"
+      />
+      <FieldMessage
+        id="node-details-description-error"
+        :error="descriptionError"
+        :length="form.description.length"
+        :max-length="TEXT_MAX_LENGTH"
       />
     </div>
 

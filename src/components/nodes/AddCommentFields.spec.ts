@@ -3,6 +3,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { AddCommentNode } from '@/types/flow'
 import { useFlowStore } from '@/stores/useFlowStore'
+import { TEXT_MAX_LENGTH } from '@/utils/nodeFormValidation'
 import AddCommentFields from './AddCommentFields.vue'
 
 const addCommentNode: AddCommentNode = {
@@ -57,6 +58,17 @@ describe('AddCommentFields', () => {
     ;(wrapper.vm as unknown as { save: () => void }).save()
 
     expect((store.nodes[0] as AddCommentNode).data.comment).toBe('padded')
+  })
+
+  it('reports the comment as invalid once it is over the length limit', async () => {
+    const wrapper = mountFields(addCommentNode)
+    expect(wrapper.vm.isValid).toBe(true)
+
+    await wrapper.find('textarea').setValue('a'.repeat(TEXT_MAX_LENGTH + 1))
+
+    expect(wrapper.text()).toContain(`Comment must be ${TEXT_MAX_LENGTH} characters or fewer`)
+    expect(wrapper.find('textarea').attributes('aria-invalid')).toBe('true')
+    expect(wrapper.vm.isValid).toBe(false)
   })
 
   it('resets the draft when the node prop changes', async () => {

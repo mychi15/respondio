@@ -9,6 +9,10 @@ import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 
+// The root is a Popover, which renders no element of its own, so attributes
+// (id, aria-invalid, aria-describedby) go to the trigger button instead.
+defineOptions({ inheritAttrs: false })
+
 const modelValue = defineModel<NodeId | null>({ default: null })
 
 const flowStore = useFlowStore()
@@ -38,7 +42,7 @@ function selectNode(nodeId: NodeId) {
 <template>
   <Popover v-model:open="isOpen">
     <PopoverTrigger as-child>
-      <Button variant="outline" class="w-full justify-start font-normal">
+      <Button v-bind="$attrs" variant="outline" class="w-full justify-start font-normal">
         {{ selectedLabel }}
       </Button>
     </PopoverTrigger>

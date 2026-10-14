@@ -398,6 +398,7 @@ describe('useFlowStore saving through the Query mutation', () => {
     await expect(store.persist()).rejects.toThrow('Failed to save flow (500)')
 
     expect(useToast().message.value).toBe('Failed to save changes. Please try again.')
+    expect(useToast().variant.value).toBe('error')
     expect(queryClient.getQueryData(FLOW_QUERY_KEY)).toBeUndefined()
   })
 

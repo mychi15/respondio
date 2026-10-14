@@ -47,6 +47,14 @@ describe('NodeTreeSelect', () => {
     wrapper.unmount()
   })
 
+  it('puts id and aria attributes on the trigger button, since the Popover root renders no element', () => {
+    const wrapper = mount(NodeTreeSelect, { attachTo: document.body, attrs: { id: 'parent', 'aria-invalid': 'true' } })
+
+    expect(wrapper.find('button').attributes()).toMatchObject({ id: 'parent', 'aria-invalid': 'true' })
+
+    wrapper.unmount()
+  })
+
   it('shows the selected node label derived from the tree', () => {
     const wrapper = mount(NodeTreeSelect, {
       attachTo: document.body,

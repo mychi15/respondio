@@ -92,18 +92,18 @@ describe('BusinessHoursFields', () => {
     expect(wrapper.text()).toContain('Start time must be before end time')
   })
 
-  it('flags a duplicate row on the same day and reports the form as invalid', async () => {
+  it('flags an overlapping row on the same day and reports the form as invalid', async () => {
     const wrapper = mountFields(businessHoursNode)
     expect(wrapper.vm.isValid).toBe(true)
 
     await wrapper.findAll('button').find((button) => button.text() === 'Add time')!.trigger('click')
-    // The new row starts on an unused day; move it onto Monday with the same start time.
+    // The new row starts on an unused day; move it onto Monday, inside 09:00–18:00.
     await wrapper.findAll('select')[2].setValue('mon')
     const timeInputs = wrapper.findAll('input[type="time"]')
-    await timeInputs[2].setValue('09:00')
+    await timeInputs[2].setValue('10:00')
     await timeInputs[3].setValue('12:00')
 
-    expect(wrapper.text()).toContain('Another row on this day already starts or ends at this time')
+    expect(wrapper.text()).toContain('Overlaps another time range on this day')
     expect(timeInputs[2].attributes('aria-invalid')).toBe('true')
     expect(wrapper.vm.isValid).toBe(false)
   })

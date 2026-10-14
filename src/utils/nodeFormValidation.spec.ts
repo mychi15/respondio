@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { isCreateNodeFormValid, validateBusinessHours, validateCreateNodeForm, validateTitle } from './nodeFormValidation'
+import {
+  isCreateNodeFormValid,
+  TEXT_MAX_LENGTH,
+  TITLE_MAX_LENGTH,
+  validateBusinessHours,
+  validateCreateNodeForm,
+  validateDescription,
+  validateMaxLength,
+  validateTitle,
+} from './nodeFormValidation'
 import type { BusinessHoursRow, CreateNodeFormInput } from './nodeFormValidation'
 
 const base: CreateNodeFormInput = { name: 'Step', description: '', type: 'sendMessage', parentId: null }
@@ -52,14 +61,33 @@ describe('validateTitle', () => {
 
 describe('validateBusinessHours', () => {
   const row = (day: BusinessHoursRow['day'], startTime: string, endTime: string): BusinessHoursRow => ({ day, startTime, endTime })
-  const DUPLICATE = 'Another row on this day already starts or ends at this time'
+  const OVERLAP = 'Overlaps another time range on this day'
 
   it('accepts distinct rows, including the same hours on different days', () => {
     expect(validateBusinessHours([row('mon', '09:00', '17:00'), row('tue', '09:00', '17:00')])).toEqual([undefined, undefined])
   })
 
-  it('accepts two non-duplicate rows on the same day', () => {
+  it('accepts two separate ranges on the same day', () => {
     expect(validateBusinessHours([row('mon', '09:00', '12:00'), row('mon', '13:00', '17:00')])).toEqual([undefined, undefined])
+  })
+
+  it('accepts back-to-back ranges where one ends as the next starts', () => {
+    expect(validateBusinessHours([row('mon', '09:00', '12:00'), row('mon', '12:00', '17:00')])).toEqual([undefined, undefined])
+  })
+
+  it('flags a later range that partly overlaps an earlier one, leaving the first valid', () => {
+    expect(validateBusinessHours([row('mon', '09:00', '12:00'), row('mon', '11:00', '14:00')])).toEqual([undefined, OVERLAP])
+  })
+
+  it('flags a range contained inside an earlier one', () => {
+    expect(validateBusinessHours([row('mon', '09:00', '17:00'), row('mon', '10:00', '11:00')])).toEqual([undefined, OVERLAP])
+  })
+
+  it('does not flag overlap against an earlier row that is itself invalid', () => {
+    expect(validateBusinessHours([row('mon', '17:00', '09:00'), row('mon', '10:00', '11:00')])).toEqual([
+      'Start time must be before end time',
+      undefined,
+    ])
   })
 
   it('requires both times', () => {
@@ -72,15 +100,38 @@ describe('validateBusinessHours', () => {
     expect(validateBusinessHours([row('mon', '09:00', '09:00')])).toEqual(['Start time must be before end time'])
   })
 
-  it('flags a later row on the same day with the same start time, leaving the first valid', () => {
-    expect(validateBusinessHours([row('mon', '09:00', '12:00'), row('mon', '09:00', '17:00')])).toEqual([undefined, DUPLICATE])
+  it('flags a later row on the same day with the same start time', () => {
+    expect(validateBusinessHours([row('mon', '09:00', '12:00'), row('mon', '09:00', '17:00')])).toEqual([undefined, OVERLAP])
   })
 
   it('flags a later row on the same day with the same end time', () => {
-    expect(validateBusinessHours([row('mon', '09:00', '17:00'), row('mon', '13:00', '17:00')])).toEqual([undefined, DUPLICATE])
+    expect(validateBusinessHours([row('mon', '09:00', '17:00'), row('mon', '13:00', '17:00')])).toEqual([undefined, OVERLAP])
   })
 
   it('flags an exact repeat', () => {
-    expect(validateBusinessHours([row('fri', '09:00', '17:00'), row('fri', '09:00', '17:00')])).toEqual([undefined, DUPLICATE])
+    expect(validateBusinessHours([row('fri', '09:00', '17:00'), row('fri', '09:00', '17:00')])).toEqual([undefined, OVERLAP])
+  })
+})
+
+describe('length limits', () => {
+  it('rejects a title over the limit', () => {
+    expect(validateTitle('a'.repeat(TITLE_MAX_LENGTH))).toBeUndefined()
+    expect(validateTitle('a'.repeat(TITLE_MAX_LENGTH + 1))).toBe(`Title must be ${TITLE_MAX_LENGTH} characters or fewer`)
+  })
+
+  it('rejects a description over the limit', () => {
+    expect(validateDescription('a'.repeat(TEXT_MAX_LENGTH))).toBeUndefined()
+    expect(validateDescription('a'.repeat(TEXT_MAX_LENGTH + 1))).toBe(`Description must be ${TEXT_MAX_LENGTH} characters or fewer`)
+  })
+
+  it('names the field in a generic max-length error', () => {
+    expect(validateMaxLength('abcd', 3, 'Comment')).toBe('Comment must be 3 characters or fewer')
+    expect(validateMaxLength('abc', 3, 'Comment')).toBeUndefined()
+  })
+
+  it('reports an over-long description from the create form, but not for a trigger', () => {
+    const description = 'a'.repeat(TEXT_MAX_LENGTH + 1)
+    expect(validateCreateNodeForm({ ...base, description }, false).description).toBe(`Description must be ${TEXT_MAX_LENGTH} characters or fewer`)
+    expect(validateCreateNodeForm({ ...base, type: 'trigger', description }, false).description).toBeUndefined()
   })
 })

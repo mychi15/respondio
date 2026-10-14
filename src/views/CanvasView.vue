@@ -221,7 +221,7 @@ watch(
     if (nodeId === null || loading) return
     const node = flowStore.nodes.find((candidate) => String(candidate.id) === String(nodeId))
     if (node && isInteractiveNodeType(node.type)) return
-    toast.show(node ? `${FLOW_NODE_TYPE_LABELS[node.type]} nodes have no details to edit.` : 'That node no longer exists.')
+    toast.show(node ? `${FLOW_NODE_TYPE_LABELS[node.type]} nodes have no details to edit.` : 'That node no longer exists.', 'warning')
     nodeDrawer.close({ replace: true })
   },
   { immediate: true, flush: 'post' },

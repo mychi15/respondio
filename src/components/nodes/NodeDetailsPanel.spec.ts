@@ -5,6 +5,7 @@ import type { FlowNode } from '@/types/flow'
 import { useFlowStore } from '@/stores/useFlowStore'
 import { useToast } from '@/composables/useToast'
 import { uploadAttachment } from '@/api/uploadApi'
+import { TEXT_MAX_LENGTH } from '@/utils/nodeFormValidation'
 import NodeDetailsPanel from './NodeDetailsPanel.vue'
 
 const triggerNode: FlowNode = {
@@ -175,6 +176,36 @@ describe('NodeDetailsPanel', () => {
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(useToast().message.value).toBe('Changes applied (sample data, not saved)')
+    expect(useToast().variant.value).toBe('warning')
+  })
+
+  it('confirms a real save with a success toast', async () => {
+    const wrapper = mountPanel(2)
+
+    await wrapper.findAll('button').find((button) => button.text() === 'Save changes')!.trigger('click')
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(useToast().message.value).toBe('Changes saved')
+    expect(useToast().variant.value).toBe('success')
+  })
+
+  it('shows an error and disables Save while the description is over the length limit', async () => {
+    const wrapper = mountPanel(2)
+    const saveButton = () => wrapper.findAll('button').find((button) => button.text() === 'Save changes')!
+
+    await wrapper.find('#node-details-description').setValue('a'.repeat(TEXT_MAX_LENGTH + 1))
+
+    expect(wrapper.text()).toContain(`Description must be ${TEXT_MAX_LENGTH} characters or fewer`)
+    expect(wrapper.find('#node-details-description').attributes('aria-describedby')).toBe('node-details-description-error')
+    expect(saveButton().attributes('disabled')).toBeDefined()
+  })
+
+  it('disables Save while the message text is over the length limit', async () => {
+    const wrapper = mountPanel(2)
+
+    await wrapper.find('#send-message-text').setValue('a'.repeat(TEXT_MAX_LENGTH + 1))
+
+    expect(wrapper.findAll('button').find((button) => button.text() === 'Save changes')!.attributes('disabled')).toBeDefined()
   })
 
   it('does not render any actions for non-editable nodes', () => {

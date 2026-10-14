@@ -79,7 +79,7 @@ export const useFlowStore = defineStore('flow', () => {
       scope: { id: 'flow-save' },
       mutationFn: saveFlow,
       onSuccess: (_, savedNodes) => queryClient.setQueryData(FLOW_QUERY_KEY, savedNodes),
-      onError: () => toast.show('Failed to save changes. Please try again.'),
+      onError: () => toast.show('Failed to save changes. Please try again.', 'error'),
     },
     queryClient,
   )

@@ -3,13 +3,14 @@ import { reactive } from 'vue'
 import type { CreatableNodeType, NodeId } from '@/types/flow'
 import { FLOW_NODE_TYPE_LABELS, NODE_TYPE_EDGE_OPTIONS } from '@/types/flow'
 import { NODE_ICON_MAP } from '@/components/icons'
-import { isCreateNodeFormValid, validateCreateNodeForm } from '@/utils/nodeFormValidation'
-import type { CreateNodeFormInput } from '@/utils/nodeFormValidation'
+import { isCreateNodeFormValid, TEXT_MAX_LENGTH, TITLE_MAX_LENGTH, validateCreateNodeForm } from '@/utils/nodeFormValidation'
+import type { CreateNodeFormErrors, CreateNodeFormInput } from '@/utils/nodeFormValidation'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
+import FieldMessage from '@/components/forms/FieldMessage.vue'
 import NodeTreeSelect from './NodeTreeSelect.vue'
 
 const props = defineProps<{ types: readonly CreatableNodeType[]; requiresParent: boolean }>()
@@ -19,11 +20,16 @@ const emit = defineEmits<{
 }>()
 
 const form = reactive<CreateNodeFormInput>({ name: '', description: '', type: '', parentId: null })
-const errors = reactive<Record<string, string | undefined>>({})
+const errors = reactive<CreateNodeFormErrors>({})
+
+// aria-invalid/aria-describedby for a field, so its error is announced with it.
+function errorAttrs(field: keyof CreateNodeFormErrors) {
+  return errors[field] ? { 'aria-invalid': true, 'aria-describedby': `create-node-${field}-error` } : {}
+}
 
 function handleSubmit() {
   const validationErrors = validateCreateNodeForm(form, props.requiresParent)
-  Object.assign(errors, { name: undefined, type: undefined, parentId: undefined }, validationErrors)
+  Object.assign(errors, { name: undefined, description: undefined, type: undefined, parentId: undefined }, validationErrors)
 
   if (!isCreateNodeFormValid(validationErrors) || !form.type) return
 
@@ -41,7 +47,7 @@ function handleSubmit() {
     <div class="flex flex-col gap-1.5">
       <Label for="create-node-type">Type</Label>
       <Select v-model="form.type">
-        <SelectTrigger id="create-node-type" class="w-full">
+        <SelectTrigger id="create-node-type" class="w-full" v-bind="errorAttrs('type')">
           <SelectValue placeholder="Select a type" />
         </SelectTrigger>
         <SelectContent>
@@ -51,25 +57,38 @@ function handleSubmit() {
           </SelectItem>
         </SelectContent>
       </Select>
-      <p v-if="errors.type" class="text-xs text-red-500">{{ errors.type }}</p>
+      <FieldMessage id="create-node-type-error" :error="errors.type" />
     </div>
 
     <template v-if="form.type !== 'trigger'">
       <div class="flex flex-col gap-1.5">
         <Label for="create-node-name">Title</Label>
-        <Input id="create-node-name" v-model="form.name" placeholder="Node title" />
-        <p v-if="errors.name" class="text-xs text-red-500">{{ errors.name }}</p>
+        <Input id="create-node-name" v-model="form.name" placeholder="Node title" v-bind="errorAttrs('name')" />
+        <FieldMessage id="create-node-name-error" :error="errors.name" :length="form.name.length" :max-length="TITLE_MAX_LENGTH" />
       </div>
 
       <div class="flex flex-col gap-1.5">
         <Label for="create-node-description">Description</Label>
-        <Textarea id="create-node-description" v-model="form.description" placeholder="Optional description" />
+        <Textarea id="create-node-description" v-model="form.description" placeholder="Optional description" v-bind="errorAttrs('description')" />
+        <FieldMessage
+          id="create-node-description-error"
+          :error="errors.description"
+          :length="form.description?.length ?? 0"
+          :max-length="TEXT_MAX_LENGTH"
+        />
       </div>
 
       <div v-if="props.requiresParent" class="flex flex-col gap-1.5">
-        <Label>Parent</Label>
-        <NodeTreeSelect v-model="form.parentId" />
-        <p v-if="errors.parentId" class="text-xs text-red-500">{{ errors.parentId }}</p>
+        <!-- Labelled by both, so the button reads "Parent, <selected node>"
+             rather than a <label for> replacing its name with just "Parent". -->
+        <Label id="create-node-parent-label" as="span">Parent</Label>
+        <NodeTreeSelect
+          id="create-node-parent"
+          v-model="form.parentId"
+          aria-labelledby="create-node-parent-label create-node-parent"
+          v-bind="errorAttrs('parentId')"
+        />
+        <FieldMessage id="create-node-parentId-error" :error="errors.parentId" />
       </div>
     </template>
 
